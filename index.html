@@ -3,177 +3,1063 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Data</title>
+  <title>Голос школы</title>
+  <meta name="description" content="Предложения учеников: пиши идеи, поддерживай чужие, следи за статусом.">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <style>
+    :root {
+      color-scheme: light;
+      --page: #f9f9f7;
+      --surface: #fcfcfb;
+      --card: #ffffff;
+      --ink: #0b0b0b;
+      --ink-2: #52514e;
+      --muted: #898781;
+      --grid: #e1e0d9;
+      --axis: #c3c2b7;
+      --border: rgba(11,11,11,0.10);
+      --accent: #2a78d6;
+      --accent-ink: #ffffff;
+      --accent-soft: #e6f0fc;
+      --good: #0ca30c;
+      --good-ink: #006300;
+      --warning: #fab219;
+      --serious: #ec835a;
+      --critical: #d03b3b;
+      --neutral: #898781;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.05);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --page: #0d0d0d;
+        --surface: #1a1a19;
+        --card: #1a1a19;
+        --ink: #ffffff;
+        --ink-2: #c3c2b7;
+        --muted: #898781;
+        --grid: #2c2c2a;
+        --axis: #383835;
+        --border: rgba(255,255,255,0.10);
+        --accent: #3987e5;
+        --accent-ink: #ffffff;
+        --accent-soft: #1c2a3d;
+        --good-ink: #0ca30c;
+        --shadow: none;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --card: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255,255,255,0.10);
+      --accent: #3987e5;
+      --accent-ink: #ffffff;
+      --accent-soft: #1c2a3d;
+      --good-ink: #0ca30c;
+      --shadow: none;
+    }
+
     * { box-sizing: border-box; }
+    html, body { margin: 0; }
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 24px 16px;
-      background: #f5f6f8;
-      color: #222;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--page);
+      color: var(--ink);
+      line-height: 1.45;
+      -webkit-text-size-adjust: 100%;
     }
-    h1 { margin-top: 0; }
-    .card {
-      background: #fff;
-      border-radius: 10px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px 48px; }
+
+    header.top {
+      padding: 28px 0 8px;
     }
-    label { display: block; font-size: 14px; margin: 8px 0 4px; }
-    input, textarea {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font: inherit;
+    header.top h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
+    header.top p { margin: 4px 0 0; color: var(--ink-2); }
+
+    nav.tabs {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; gap: 4px;
+      background: var(--page);
+      padding: 12px 0;
+      overflow-x: auto;
+      scrollbar-width: none;
     }
-    textarea { min-height: 90px; font-family: monospace; }
-    button {
-      margin-top: 12px;
-      padding: 8px 16px;
-      border: none;
-      border-radius: 6px;
-      background: #3ecf8e;
-      color: #fff;
-      font: inherit;
+    nav.tabs::-webkit-scrollbar { display: none; }
+    nav.tabs button {
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--ink-2);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font: inherit; font-size: 15px;
       cursor: pointer;
     }
-    button:hover { opacity: .9; }
-    button.delete { background: #e5484d; margin-top: 0; padding: 4px 10px; font-size: 13px; }
-    button.secondary { background: #666; }
-    .toolbar { display: flex; gap: 8px; align-items: center; }
-    .toolbar input { flex: 1; }
-    .toolbar button { margin-top: 0; }
-    .item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .type { font-weight: 600; }
-    .meta { font-size: 12px; color: #888; }
-    pre {
-      background: #f0f1f3;
-      padding: 8px;
-      border-radius: 6px;
-      overflow-x: auto;
-      margin: 8px 0 0;
-      font-size: 13px;
+    nav.tabs button[aria-selected="true"] {
+      background: var(--ink); color: var(--page); border-color: var(--ink);
     }
-    #status { font-size: 14px; min-height: 20px; }
-    .error { color: #e5484d; }
-    .ok { color: #1a9e62; }
+
+    section.tab { display: none; }
+    section.tab.active { display: block; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    h2 { font-size: 20px; margin: 0 0 12px; }
+    h3 { font-size: 16px; margin: 0 0 4px; }
+    .hint { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+
+    label { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+    label .opt { font-weight: 400; color: var(--muted); }
+    input, textarea, select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit; font-size: 16px;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    input:focus, textarea:focus, select:focus, button:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 1px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      border: none; border-radius: 10px;
+      padding: 10px 16px;
+      background: var(--accent); color: var(--accent-ink);
+      font: inherit; font-size: 15px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--border); font-weight: 500; }
+    .btn.small { padding: 6px 12px; font-size: 14px; }
+    .btn.danger { background: var(--critical); }
+    .btn.block { width: 100%; margin-top: 16px; padding: 12px; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip-radio { position: relative; }
+    .chip-radio input { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; left: 0; top: 0; }
+    .chip-radio span {
+      display: inline-block;
+      padding: 7px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .chip-radio input:checked + span { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .chip-radio input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    .similar {
+      margin-top: 12px;
+      border: 1px dashed var(--accent);
+      background: var(--accent-soft);
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .similar p { margin: 0 0 8px; font-size: 14px; }
+    .similar-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; }
+    .similar-item + .similar-item { border-top: 1px solid var(--border); }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+      background: var(--ink); color: var(--page);
+      padding: 10px 16px; border-radius: 10px;
+      font-size: 14px; z-index: 50;
+      max-width: calc(100% - 32px);
+      opacity: 0; transition: opacity .2s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; }
+
+    .filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    .filters input { grid-column: 1 / -1; }
+    @media (max-width: 560px) { .filters { grid-template-columns: 1fr 1fr; } .filters select:last-child { grid-column: 1 / -1; } }
+
+    .sug { display: grid; grid-template-columns: 64px 1fr; gap: 14px; }
+    .votebox {
+      display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+      gap: 2px;
+    }
+    .votebox .num { font-size: 26px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+    .votebox .lbl { font-size: 12px; color: var(--muted); }
+    .votebox button {
+      margin-top: 8px;
+      width: 56px; height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: transparent; color: var(--accent);
+      font-size: 18px; cursor: pointer;
+    }
+    .votebox button.done { background: var(--accent); color: var(--accent-ink); }
+    .votebox button:disabled { cursor: default; }
+    .sug h3 { font-size: 17px; overflow-wrap: anywhere; }
+    .sug .text { color: var(--ink-2); margin: 4px 0 0; font-size: 15px; overflow-wrap: anywhere; white-space: pre-line; }
+    .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 10px; font-size: 13px; color: var(--ink-2); }
+    .tag { padding: 2px 8px; border-radius: 6px; background: var(--page); border: 1px solid var(--border); }
+    .status {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 2px 10px 2px 8px; border-radius: 999px;
+      border: 1px solid var(--border);
+      font-weight: 600; color: var(--ink);
+    }
+    .status i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .deadline.overdue { color: var(--critical); font-weight: 600; }
+    .reply {
+      margin-top: 10px; padding: 8px 12px;
+      border-left: 3px solid var(--accent);
+      background: var(--page); border-radius: 0 8px 8px 0;
+      font-size: 14px; color: var(--ink-2);
+    }
+    .reply b { color: var(--ink); }
+    details.members { margin-top: 10px; font-size: 14px; }
+    details.members summary { cursor: pointer; color: var(--accent); }
+    details.members ul { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); }
+    details.members li { margin-bottom: 6px; overflow-wrap: anywhere; }
+
+    .admin-box {
+      margin-top: 12px; padding: 12px;
+      border: 1px dashed var(--serious); border-radius: 10px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    }
+    .admin-box .full { grid-column: 1 / -1; }
+    .admin-box label { margin: 0 0 4px; font-size: 12px; }
+    .admin-box .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 560px) { .admin-box { grid-template-columns: 1fr; } }
+    .admin-banner {
+      display: none;
+      background: var(--serious); color: #0b0b0b;
+      padding: 8px 12px; border-radius: 10px; font-size: 14px; margin-bottom: 12px;
+      justify-content: space-between; align-items: center; gap: 8px;
+    }
+    body.admin .admin-banner { display: flex; }
+
+    .empty { text-align: center; color: var(--muted); padding: 32px 12px; }
+
+    /* Статистика */
+    .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+    @media (max-width: 640px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+    .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+    .kpi .v { font-size: 30px; font-weight: 700; line-height: 1.1; }
+    .kpi .l { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid2 > .card { margin-bottom: 0; }
+    @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+    .stack > * + * { margin-top: 14px; }
+    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .chart-head h2 { margin: 0; font-size: 17px; }
+    .chart-head p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+    .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex: 0 0 auto; }
+    .seg button { border: none; background: transparent; color: var(--ink-2); padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+    .chart-box { position: relative; height: 260px; }
+    .chart-box.tall { height: 340px; }
+    table.data { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+    table.data th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    table.data td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    table.data th.n { text-align: right; }
+
+    /* QR */
+    .qr-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 640px) { .qr-layout { grid-template-columns: 1fr; } }
+    #qr-img { background: #fff; padding: 14px; border-radius: 14px; border: 1px solid var(--border); width: 100%; max-width: 280px; }
+    #qr-img svg, #qr-img img { display: block; width: 100%; height: auto; }
+    .qr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+    /* Плакат для печати */
+    #poster { display: none; }
+    @media print {
+      body { background: #fff; }
+      body > *:not(#poster) { display: none !important; }
+      #poster {
+        display: flex !important; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; color: #000; min-height: 95vh; font-family: system-ui, sans-serif;
+      }
+      #poster h1 { font-size: 44px; margin: 0 0 8px; }
+      #poster p { font-size: 22px; margin: 0 0 24px; }
+      #poster .qr { width: 420px; }
+      #poster .qr svg { width: 100%; height: auto; }
+      #poster .url { font-size: 16px; margin-top: 16px; color: #333; }
+    }
   </style>
 </head>
 <body>
-  <h1>App Data</h1>
+  <div class="wrap">
+    <header class="top">
+      <h1>Голос школы</h1>
+      <p>Напиши, что хочешь изменить в школе. Поддержи идеи других — самые популярные берём в работу.</p>
+    </header>
 
-  <div class="card">
-    <h2>Добавить запись</h2>
-    <form id="add-form">
-      <label for="item_type">item_type</label>
-      <input id="item_type" required placeholder="например: note">
-      <label for="data">data (JSON)</label>
-      <textarea id="data" placeholder='{"title": "Привет", "text": "Мир"}'>{}</textarea>
-      <button type="submit">Сохранить</button>
-    </form>
-  </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="propose" aria-selected="true">✍️ Предложить</button>
+      <button role="tab" data-tab="list" aria-selected="false">📋 Предложения</button>
+      <button role="tab" data-tab="stats" aria-selected="false">📊 Статистика</button>
+      <button role="tab" data-tab="qr" aria-selected="false">🔳 QR-код</button>
+    </nav>
 
-  <div class="card">
-    <div class="toolbar">
-      <input id="filter" placeholder="Фильтр по item_type">
-      <button class="secondary" id="reload">Обновить</button>
+    <div class="admin-banner">
+      <span>🔧 Режим совета: меняй статусы, сроки, объединяй дубли.</span>
+      <button class="btn small ghost" id="admin-exit">Выйти</button>
     </div>
-    <p id="status"></p>
-    <div id="list"></div>
+
+    <!-- ПРЕДЛОЖИТЬ -->
+    <section class="tab active" id="tab-propose">
+      <div class="card">
+        <h2>Твоё предложение</h2>
+        <p class="hint">Анонимно. Имя не нужно.</p>
+        <form id="form">
+          <label for="f-title">Коротко: что предлагаешь?</label>
+          <input id="f-title" maxlength="120" required placeholder="Например: свободная одежда по пятницам" autocomplete="off">
+          <div id="similar"></div>
+
+          <label for="f-text">Подробнее <span class="opt">(необязательно)</span></label>
+          <textarea id="f-text" maxlength="1000" placeholder="Почему это важно? Как это можно сделать?"></textarea>
+
+          <label>Категория</label>
+          <div class="chips" id="f-cats"></div>
+
+          <label for="f-class">Класс <span class="opt">(необязательно)</span></label>
+          <select id="f-class">
+            <option value="">— не указывать —</option>
+          </select>
+
+          <button class="btn block" type="submit" id="f-submit">Отправить</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- СПИСОК -->
+    <section class="tab" id="tab-list">
+      <div class="filters">
+        <input id="q" type="search" placeholder="🔍 Поиск по предложениям">
+        <select id="fl-cat"><option value="">Все категории</option></select>
+        <select id="fl-status"><option value="">Все статусы</option></select>
+        <select id="fl-sort">
+          <option value="votes">Больше голосов</option>
+          <option value="new">Сначала новые</option>
+          <option value="deadline">Ближайший срок</option>
+        </select>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <!-- СТАТИСТИКА -->
+    <section class="tab" id="tab-stats">
+      <div class="kpis" id="kpis"></div>
+      <div class="stack">
+        <div class="card">
+          <div class="chart-head">
+            <div>
+              <h2>Динамика обращений</h2>
+              <p>Новые предложения + голоса «я тоже»</p>
+            </div>
+            <div class="seg" id="period-seg">
+              <button data-period="week" aria-pressed="true">Недели</button>
+              <button data-period="month" aria-pressed="false">Месяцы</button>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="ch-dyn" aria-label="Динамика обращений"></canvas></div>
+        </div>
+
+        <div class="grid2">
+          <div class="card">
+            <div class="chart-head"><div><h2>Самые актуальные категории</h2><p>Сколько учеников поддерживают идеи в категории</p></div></div>
+            <div class="chart-box tall"><canvas id="ch-cat" aria-label="Категории"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="chart-head"><div><h2>Статусы предложений</h2><p>Что уже сделано и что в работе</p></div></div>
+            <div class="chart-box tall"><canvas id="ch-status" aria-label="Статусы"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="chart-head"><div><h2>Самые массовые запросы</h2><p>Топ-10 по числу голосов</p></div></div>
+          <div class="chart-box tall"><canvas id="ch-top" aria-label="Топ запросов"></canvas></div>
+        </div>
+
+        <div class="card">
+          <div class="chart-head"><div><h2>Повторяющиеся обращения</h2><p>Одну и ту же проблему написали независимо друг от друга несколько раз</p></div></div>
+          <div id="repeats"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- QR -->
+    <section class="tab" id="tab-qr">
+      <div class="card">
+        <h2>QR-код для учеников</h2>
+        <p class="hint">Распечатай и повесь в классах, у столовой, на входе. Ученик сканирует — сразу попадает на форму.</p>
+        <div class="qr-layout">
+          <div id="qr-img"></div>
+          <div>
+            <label for="qr-url">Ссылка в QR-коде</label>
+            <input id="qr-url">
+            <div class="qr-actions">
+              <button class="btn" id="qr-print">🖨 Печать плаката</button>
+              <button class="btn ghost" id="qr-download">⬇️ Скачать PNG</button>
+              <button class="btn ghost" id="qr-copy">📋 Копировать ссылку</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
+
+  <div id="poster">
+    <h1>Голос школы</h1>
+    <p>Что бы ты изменил в школе? Сканируй и пиши!</p>
+    <div class="qr" id="poster-qr"></div>
+    <div class="url" id="poster-url"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
   <script>
+    // ================== НАСТРОЙКИ ==================
     const SUPABASE_URL = 'https://ossvjewxhcrawwxbadqd.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_yV89rVEs5iIibMJIApTN-g_TZtT9ewN';
     const TABLE = 'app_data';
+    // SHA-256 от PIN-кода совета (сейчас PIN = 2026). Вход: добавь #admin к адресу сайта.
+    const ADMIN_PIN_HASH = '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab';
 
+    const CATEGORIES = [
+      { id: 'study',   name: 'Учёба и уроки',       icon: '📚' },
+      { id: 'food',    name: 'Столовая и еда',      icon: '🍽' },
+      { id: 'events',  name: 'Мероприятия',         icon: '🎉' },
+      { id: 'sport',   name: 'Спорт',               icon: '⚽' },
+      { id: 'clothes', name: 'Форма и дресс-код',   icon: '👕' },
+      { id: 'comfort', name: 'Здание и комфорт',    icon: '🏫' },
+      { id: 'clubs',   name: 'Кружки и секции',     icon: '🎨' },
+      { id: 'other',   name: 'Другое',              icon: '💡' },
+    ];
+    const STATUSES = [
+      { id: 'new',      name: 'Новое',            color: 'var(--neutral)' },
+      { id: 'review',   name: 'На рассмотрении',  color: 'var(--warning)' },
+      { id: 'progress', name: 'В работе',         color: 'var(--accent)' },
+      { id: 'done',     name: 'Выполнено',        color: 'var(--good)' },
+      { id: 'rejected', name: 'Отклонено',        color: 'var(--critical)' },
+    ];
+    const CLASSES = ['5', '6', '7', '8', '9', '10', '11'];
+
+    // Типы записей в app_data.item_type
+    const T = { SUG: 'suggestion', VOTE: 'vote', STATUS: 'status', MERGE: 'merge' };
+
+    // ================== УТИЛИТЫ ==================
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = (s) => document.querySelector(s);
+    const catById = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+    const statusById = Object.fromEntries(STATUSES.map(s => [s.id, s]));
 
-    const listEl = document.getElementById('list');
-    const statusEl = document.getElementById('status');
-    const filterEl = document.getElementById('filter');
+    function esc(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function toast(msg) {
+      const t = $('#toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => t.classList.remove('show'), 2600);
+    }
+    function lsGet(k, def) { try { const v = localStorage.getItem(k); return v === null ? def : v; } catch { return def; } }
+    function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
 
-    function setStatus(text, cls = '') {
-      statusEl.textContent = text;
-      statusEl.className = cls;
+    // Анонимный идентификатор устройства: чтобы один человек не голосовал дважды
+    let DEVICE = lsGet('device_id', null);
+    if (!DEVICE) {
+      DEVICE = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now());
+      lsSet('device_id', DEVICE);
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[c]));
+    const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const MONTHS_FULL = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    function fmtDeadline(d) {
+      const dt = new Date(d + 'T00:00:00');
+      return `${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]}`;
+    }
+    function plural(n, one, few, many) {
+      const m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return one;
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+      return many;
+    }
+    function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+    // ================== ПОХОЖЕСТЬ ТЕКСТОВ ==================
+    const STOP = new Set(('что это как для чтобы или при над под без про все всё его еще ещё уже нас вас они она оно был была были быть '
+      + 'сделать сделайте хочу хотим хотелось надо нужно нужен нужна нужны можно давайте пусть очень более менее школе школа школу школы '
+      + 'которые который которая если тоже также только').split(' '));
+    function tokens(s) {
+      return new Set(String(s).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9\s]/g, ' ')
+        .split(/\s+/).filter(w => w.length >= 3 && !STOP.has(w)).map(w => w.slice(0, 5)));
+    }
+    function similarity(a, b) {
+      if (!a.size || !b.size) return 0;
+      let inter = 0;
+      for (const x of a) if (b.has(x)) inter++;
+      return inter / Math.min(a.size, b.size);
+    }
+    // Считаем дублем: совпадает большая часть ключевых слов (и слов хотя бы 2)
+    function isDuplicate(a, b) {
+      const minSize = Math.min(a.size, b.size);
+      if (minSize < 2) return a.size === b.size && similarity(a, b) === 1;
+      return similarity(a, b) >= 0.75;
     }
 
-    async function loadItems() {
-      setStatus('Загрузка...');
-      let query = db.from(TABLE).select('*').order('created_at', { ascending: false });
-      const filter = filterEl.value.trim();
-      if (filter) query = query.eq('item_type', filter);
+    // ================== ДАННЫЕ ==================
+    let rows = [];
+    let groups = [];      // сгруппированные предложения
+    let groupOfSug = {};  // id предложения -> группа
 
-      const { data, error } = await query;
-      if (error) {
-        setStatus('Ошибка: ' + error.message, 'error');
-        listEl.innerHTML = '';
-        return;
+    async function fetchAll() {
+      const all = [];
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await db.from(TABLE)
+          .select('id,item_type,data,created_at')
+          .in('item_type', Object.values(T))
+          .order('created_at', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        all.push(...data);
+        if (data.length < PAGE) break;
       }
-
-      setStatus(`Записей: ${data.length}`);
-      listEl.innerHTML = data.map(row => `
-        <div class="card">
-          <div class="item-head">
-            <div>
-              <span class="type">${escapeHtml(row.item_type ?? '')}</span>
-              <div class="meta">id: ${escapeHtml(row.id)} · ${new Date(row.created_at).toLocaleString()}</div>
-            </div>
-            <button class="delete" data-id="${escapeHtml(row.id)}">Удалить</button>
-          </div>
-          <pre>${escapeHtml(JSON.stringify(row.data, null, 2))}</pre>
-        </div>
-      `).join('');
+      return all;
     }
 
-    document.getElementById('add-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const itemType = document.getElementById('item_type').value.trim();
-      let json;
+    function build() {
+      const sugs = rows.filter(r => r.item_type === T.SUG && r.data && r.data.title);
+      const byId = Object.fromEntries(sugs.map(s => [s.id, s]));
+
+      // Union-find: объединяем дубли (автоматически и вручную советом)
+      const parent = {};
+      const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+      const union = (a, b) => {
+        const ra = find(a), rb = find(b);
+        if (ra === rb) return;
+        // корнем становится более раннее предложение
+        if (new Date(byId[ra].created_at) <= new Date(byId[rb].created_at)) parent[rb] = ra; else parent[ra] = rb;
+      };
+      sugs.forEach(s => { parent[s.id] = s.id; s._tok = tokens(s.data.title); });
+
+      for (let i = 0; i < sugs.length; i++)
+        for (let j = 0; j < i; j++)
+          if (isDuplicate(sugs[i]._tok, sugs[j]._tok)) union(sugs[i].id, sugs[j].id);
+
+      rows.filter(r => r.item_type === T.MERGE).forEach(m => {
+        const a = m.data?.from_id, b = m.data?.into_id;
+        if (byId[a] && byId[b]) union(a, b);
+      });
+
+      const map = {};
+      sugs.forEach(s => {
+        const root = find(s.id);
+        if (!map[root]) map[root] = { id: root, members: [], voters: new Set(), events: [], status: null };
+        map[root].members.push(s);
+      });
+
+      groupOfSug = {};
+      Object.values(map).forEach(g => g.members.forEach(m => { groupOfSug[m.id] = g; }));
+
+      // голоса: автор предложения + все «я тоже», уникально по устройству
+      Object.values(map).forEach(g => g.members.forEach(m => {
+        g.voters.add(m.data.device || ('sug-' + m.id));
+        g.events.push(m.created_at);
+      }));
+      rows.filter(r => r.item_type === T.VOTE).forEach(v => {
+        const g = groupOfSug[v.data?.suggestion_id];
+        if (!g) return;
+        g.voters.add(v.data.device || ('vote-' + v.id));
+        g.events.push(v.created_at);
+      });
+
+      // статус: последняя запись совета по любому предложению группы
+      rows.filter(r => r.item_type === T.STATUS).forEach(st => {
+        const g = groupOfSug[st.data?.suggestion_id];
+        if (g) g.status = st; // rows отсортированы по времени, последняя побеждает
+      });
+
+      groups = Object.values(map).map(g => {
+        const root = g.members.find(m => m.id === g.id);
+        const catCount = {};
+        g.members.forEach(m => { catCount[m.data.category] = (catCount[m.data.category] || 0) + 1; });
+        const category = root.data.category in catById ? root.data.category
+          : (Object.entries(catCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'other');
+        return {
+          ...g,
+          root,
+          title: root.data.title,
+          text: root.data.text || '',
+          category: catById[category] ? category : 'other',
+          created: root.created_at,
+          votes: g.voters.size,
+          voted: g.voters.has(DEVICE),
+          own: g.members.some(m => m.data.device === DEVICE),
+          statusId: statusById[g.status?.data?.status] ? g.status.data.status : 'new',
+          deadline: g.status?.data?.deadline || '',
+          comment: g.status?.data?.comment || '',
+        };
+      });
+    }
+
+    async function reload() {
       try {
-        json = JSON.parse(document.getElementById('data').value || '{}');
-      } catch (err) {
-        setStatus('Некорректный JSON: ' + err.message, 'error');
+        rows = await fetchAll();
+      } catch (e) {
+        $('#list').innerHTML = `<div class="card empty">Не удалось загрузить данные: ${esc(e.message)}</div>`;
         return;
       }
+      build();
+      renderList();
+      renderSimilar();
+      if (currentTab === 'stats') renderStats();
+    }
 
-      const { error } = await db.from(TABLE).insert({ item_type: itemType, data: json });
-      if (error) {
-        setStatus('Ошибка сохранения: ' + error.message, 'error');
-        return;
-      }
-      document.getElementById('data').value = '{}';
-      setStatus('Сохранено', 'ok');
-      loadItems();
+    // ================== ФОРМА ==================
+    $('#f-cats').innerHTML = CATEGORIES.map((c, i) => `
+      <label class="chip-radio" style="margin:0;font-weight:400">
+        <input type="radio" name="cat" value="${c.id}" ${i === CATEGORIES.length - 1 ? 'checked' : ''}>
+        <span>${c.icon} ${esc(c.name)}</span>
+      </label>`).join('');
+    $('#f-class').innerHTML += CLASSES.map(c => `<option value="${c}">${c} класс</option>`).join('');
+
+    function renderSimilar() {
+      const q = tokens($('#f-title').value);
+      const box = $('#similar');
+      if (q.size === 0) { box.innerHTML = ''; return; }
+      const found = groups
+        .map(g => ({ g, s: Math.max(...g.members.map(m => similarity(q, m._tok))) }))
+        .filter(x => x.s >= 0.5)
+        .sort((a, b) => b.s - a.s || b.g.votes - a.g.votes)
+        .slice(0, 3);
+      if (!found.length) { box.innerHTML = ''; return; }
+      box.innerHTML = `<div class="similar">
+        <p>👀 Похоже, это уже предлагали. Поддержи — так идея наберёт больше голосов:</p>
+        ${found.map(({ g }) => `
+          <div class="similar-item">
+            <span><b>${esc(g.title)}</b> · ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}</span>
+            ${voteButtonSmall(g)}
+          </div>`).join('')}
+      </div>`;
+    }
+    function voteButtonSmall(g) {
+      if (g.voted) return `<span class="hint" style="margin:0;white-space:nowrap">✓ ${g.own ? 'твоя идея' : 'ты за'}</span>`;
+      return `<button type="button" class="btn small" data-vote="${esc(g.id)}">👍 Я тоже</button>`;
+    }
+
+    let simTimer;
+    $('#f-title').addEventListener('input', () => { clearTimeout(simTimer); simTimer = setTimeout(renderSimilar, 200); });
+
+    $('#form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = $('#f-title').value.trim();
+      if (title.length < 3) { toast('Напиши чуть подробнее'); return; }
+      const btn = $('#f-submit');
+      btn.disabled = true;
+      const { error } = await db.from(TABLE).insert({
+        item_type: T.SUG,
+        data: {
+          title,
+          text: $('#f-text').value.trim(),
+          category: document.querySelector('input[name="cat"]:checked')?.value || 'other',
+          class: $('#f-class').value,
+          device: DEVICE,
+        },
+      });
+      btn.disabled = false;
+      if (error) { toast('Ошибка: ' + error.message); return; }
+      $('#form').reset();
+      $('#similar').innerHTML = '';
+      toast('Спасибо! Предложение отправлено 🎉');
+      await reload();
+      showTab('list');
     });
 
-    listEl.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button.delete');
-      if (!btn) return;
-      if (!confirm('Удалить запись?')) return;
-      const { error } = await db.from(TABLE).delete().eq('id', btn.dataset.id);
-      if (error) {
-        setStatus('Ошибка удаления: ' + error.message, 'error');
-        return;
-      }
-      loadItems();
+    // ================== ГОЛОСОВАНИЕ ==================
+    async function vote(groupId) {
+      const g = groups.find(x => String(x.id) === String(groupId));
+      if (!g || g.voted) return;
+      g.voted = true;
+      const { error } = await db.from(TABLE).insert({ item_type: T.VOTE, data: { suggestion_id: g.id, device: DEVICE } });
+      if (error) { g.voted = false; toast('Ошибка: ' + error.message); return; }
+      toast('Голос учтён 👍');
+      reload();
+    }
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-vote]');
+      if (b) { b.disabled = true; vote(b.dataset.vote); }
     });
 
-    document.getElementById('reload').addEventListener('click', loadItems);
-    filterEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadItems(); });
+    // ================== СПИСОК ==================
+    $('#fl-cat').innerHTML += CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${esc(c.name)}</option>`).join('');
+    $('#fl-status').innerHTML += STATUSES.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+    ['#q', '#fl-cat', '#fl-status', '#fl-sort'].forEach(s => $(s).addEventListener('input', renderList));
 
-    loadItems();
+    function statusBadge(id) {
+      const s = statusById[id];
+      return `<span class="status"><i style="background:${s.color}"></i>${esc(s.name)}</span>`;
+    }
+
+    function renderList() {
+      const q = $('#q').value.trim().toLowerCase();
+      const cat = $('#fl-cat').value, st = $('#fl-status').value, sort = $('#fl-sort').value;
+      let list = groups.filter(g =>
+        (!cat || g.category === cat) &&
+        (!st || g.statusId === st) &&
+        (!q || g.members.some(m => (m.data.title + ' ' + (m.data.text || '')).toLowerCase().includes(q))));
+
+      const sorters = {
+        votes: (a, b) => b.votes - a.votes || new Date(b.created) - new Date(a.created),
+        new: (a, b) => new Date(b.created) - new Date(a.created),
+        deadline: (a, b) => (a.deadline || '9999') .localeCompare(b.deadline || '9999') || b.votes - a.votes,
+      };
+      list.sort(sorters[sort]);
+
+      if (!list.length) {
+        $('#list').innerHTML = `<div class="card empty">${groups.length ? 'Ничего не найдено' : 'Пока нет предложений. Будь первым! ✍️'}</div>`;
+        return;
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      $('#list').innerHTML = list.map(g => {
+        const cat = catById[g.category];
+        const overdue = g.deadline && g.deadline < today && !['done', 'rejected'].includes(g.statusId);
+        const others = g.members.filter(m => m.id !== g.id);
+        return `
+        <article class="card">
+          <div class="sug">
+            <div class="votebox">
+              <div class="num">${g.votes}</div>
+              <div class="lbl">${plural(g.votes, 'голос', 'голоса', 'голосов')}</div>
+              <button data-vote="${esc(g.id)}" class="${g.voted ? 'done' : ''}" ${g.voted ? 'disabled' : ''}
+                title="${g.own ? 'Твоё предложение' : g.voted ? 'Ты уже поддержал(а)' : 'Поддержать'}"
+                aria-label="Поддержать">${g.voted ? '✓' : '👍'}</button>
+            </div>
+            <div>
+              <h3>${esc(g.title)}</h3>
+              ${g.text ? `<p class="text">${esc(g.text)}</p>` : ''}
+              <div class="meta">
+                ${statusBadge(g.statusId)}
+                ${g.deadline ? `<span class="deadline ${overdue ? 'overdue' : ''}">📅 срок до ${fmtDeadline(g.deadline)}${overdue ? ' (просрочено)' : ''}</span>` : ''}
+                <span class="tag">${cat.icon} ${esc(cat.name)}</span>
+                ${g.root.data.class ? `<span>${esc(g.root.data.class)} класс</span>` : ''}
+              </div>
+              ${g.comment ? `<div class="reply"><b>Ответ совета:</b> ${esc(g.comment)}</div>` : ''}
+              ${others.length ? `
+                <details class="members">
+                  <summary>Ещё ${others.length} ${plural(others.length, 'похожее обращение', 'похожих обращения', 'похожих обращений')}</summary>
+                  <ul>${others.map(m => `<li><b>${esc(m.data.title)}</b>${m.data.text ? ' — ' + esc(m.data.text) : ''}</li>`).join('')}</ul>
+                </details>` : ''}
+              ${isAdmin ? adminBox(g) : ''}
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+    }
+
+    // ================== РЕЖИМ СОВЕТА ==================
+    let isAdmin = sessionStorageGet('admin') === '1';
+    function sessionStorageGet(k) { try { return sessionStorage.getItem(k); } catch { return null; } }
+    function sessionStorageSet(k, v) { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} }
+    document.body.classList.toggle('admin', isAdmin);
+
+    async function sha256(text) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    async function checkAdminHash() {
+      if (location.hash !== '#admin' || isAdmin) return;
+      const pin = prompt('PIN-код совета:');
+      history.replaceState(null, '', location.pathname + location.search);
+      if (pin === null) return;
+      if (await sha256(pin.trim()) === ADMIN_PIN_HASH) {
+        isAdmin = true;
+        sessionStorageSet('admin', '1');
+        document.body.classList.add('admin');
+        toast('Режим совета включён');
+        renderList();
+        showTab('list');
+      } else toast('Неверный PIN');
+    }
+    window.addEventListener('hashchange', checkAdminHash);
+    $('#admin-exit').addEventListener('click', () => {
+      isAdmin = false; sessionStorageSet('admin', null);
+      document.body.classList.remove('admin'); renderList();
+    });
+
+    function adminBox(g) {
+      const others = groups.filter(x => x.id !== g.id).sort((a, b) => a.title.localeCompare(b.title));
+      return `
+      <div class="admin-box" data-admin="${esc(g.id)}">
+        <div><label>Статус</label>
+          <select name="status">${STATUSES.map(s => `<option value="${s.id}" ${s.id === g.statusId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+        <div><label>Срок до</label><input type="date" name="deadline" value="${esc(g.deadline)}"></div>
+        <div class="full"><label>Ответ совета</label><input name="comment" maxlength="300" value="${esc(g.comment)}" placeholder="Например: договорились с директором, пробуем с октября"></div>
+        <div class="full row">
+          <button class="btn small" data-act="save">💾 Сохранить</button>
+          <select name="merge" style="flex:1;min-width:160px">
+            <option value="">Объединить с дублем…</option>
+            ${others.map(o => `<option value="${esc(o.id)}">${esc(o.title.slice(0, 60))} (${o.votes})</option>`).join('')}
+          </select>
+          <button class="btn small ghost" data-act="merge">🔗 Объединить</button>
+          <button class="btn small danger" data-act="delete">🗑 Удалить</button>
+        </div>
+      </div>`;
+    }
+
+    $('#list').addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b || !isAdmin) return;
+      const box = b.closest('[data-admin]');
+      const g = groups.find(x => x.id == box.dataset.admin);
+      if (!g) return;
+      const val = (n) => box.querySelector(`[name="${n}"]`).value;
+      let error;
+      b.disabled = true;
+
+      if (b.dataset.act === 'save') {
+        ({ error } = await db.from(TABLE).insert({
+          item_type: T.STATUS,
+          data: { suggestion_id: g.id, status: val('status'), deadline: val('deadline'), comment: val('comment').trim() },
+        }));
+        if (!error) toast('Сохранено');
+      }
+      if (b.dataset.act === 'merge') {
+        const into = val('merge');
+        if (!into) { toast('Выбери, с чем объединить'); b.disabled = false; return; }
+        ({ error } = await db.from(TABLE).insert({ item_type: T.MERGE, data: { from_id: g.id, into_id: Number(into) || into } }));
+        if (!error) toast('Объединено');
+      }
+      if (b.dataset.act === 'delete') {
+        if (!confirm(`Удалить «${g.title}» и все голоса за него?`)) { b.disabled = false; return; }
+        const memberIds = g.members.map(m => m.id);
+        const related = rows.filter(r => r.item_type !== T.SUG &&
+          (memberIds.includes(r.data?.suggestion_id) || memberIds.includes(r.data?.from_id) || memberIds.includes(r.data?.into_id)))
+          .map(r => r.id);
+        ({ error } = await db.from(TABLE).delete().in('id', [...memberIds, ...related]));
+        if (!error) toast('Удалено');
+      }
+      if (error) toast('Ошибка: ' + error.message);
+      await reload();
+    });
+
+    // ================== СТАТИСТИКА ==================
+    let period = 'week';
+    const charts = {};
+    $('#period-seg').addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      period = b.dataset.period;
+      $('#period-seg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      renderStats();
+    });
+
+    function weekStart(d) {
+      const x = new Date(d); x.setHours(0, 0, 0, 0);
+      x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+      return x;
+    }
+    function buckets(dates) {
+      const now = new Date();
+      const keyOf = (d) => period === 'week'
+        ? weekStart(d).getTime()
+        : new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const counts = {};
+      dates.forEach(s => { const k = keyOf(new Date(s)); counts[k] = (counts[k] || 0) + 1; });
+      // последние 12 недель / 12 месяцев, без пропусков
+      const out = [];
+      let cur = period === 'week' ? weekStart(now) : new Date(now.getFullYear(), now.getMonth(), 1);
+      for (let i = 0; i < 12; i++) {
+        const k = cur.getTime();
+        const label = period === 'week'
+          ? `${cur.getDate()} ${MONTHS[cur.getMonth()]}`
+          : `${MONTHS[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}`;
+        const tip = period === 'week'
+          ? `Неделя с ${cur.getDate()} ${MONTHS_FULL[cur.getMonth()]}`
+          : `${MONTHS[cur.getMonth()]} ${cur.getFullYear()}`;
+        out.unshift({ label, tip, value: counts[k] || 0 });
+        cur = period === 'week' ? new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - 7) : new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
+      }
+      return out;
+    }
+
+    function baseOptions(horizontal, tooltipTitle) {
+      const ink2 = cssVar('--ink-2'), muted = cssVar('--muted'), grid = cssVar('--grid'), axis = cssVar('--axis');
+      const valueAxis = {
+        beginAtZero: true,
+        ticks: { precision: 0, color: muted, font: { size: 12 } },
+        grid: { color: grid, drawTicks: false },
+        border: { display: false },
+      };
+      const catAxis = {
+        ticks: { color: ink2, font: { size: 12 }, autoSkip: !horizontal, maxRotation: 0 },
+        grid: { display: false },
+        border: { color: axis },
+      };
+      return {
+        indexAxis: horizontal ? 'y' : 'x',
+        responsive: true, maintainAspectRatio: false,
+        animation: false,
+        interaction: { mode: 'index', intersect: false, axis: horizontal ? 'y' : 'x' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: cssVar('--card'), titleColor: cssVar('--ink'), bodyColor: ink2,
+            borderColor: cssVar('--border'), borderWidth: 1, padding: 10, displayColors: false,
+            callbacks: tooltipTitle ? { title: tooltipTitle } : {},
+          },
+        },
+        scales: horizontal ? { x: valueAxis, y: catAxis } : { x: catAxis, y: valueAxis },
+      };
+    }
+    function drawChart(id, config) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), config);
+    }
+    const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+
+    function renderStats() {
+      const accent = cssVar('--accent');
+      const allEvents = groups.flatMap(g => g.events);
+      const total = groups.reduce((s, g) => s + g.votes, 0);
+      const inWork = groups.filter(g => g.statusId === 'progress').length;
+      const done = groups.filter(g => g.statusId === 'done').length;
+      $('#kpis').innerHTML = [
+        [groups.length, plural(groups.length, 'идея', 'идеи', 'идей')],
+        [total, plural(total, 'голос', 'голоса', 'голосов') + ' всего'],
+        [inWork, 'в работе'],
+        [done, 'выполнено'],
+      ].map(([v, l]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+      // Динамика
+      const b = buckets(allEvents);
+      drawChart('ch-dyn', {
+        type: 'bar',
+        data: { labels: b.map(x => x.label), datasets: [{ label: 'Обращений', data: b.map(x => x.value), backgroundColor: accent, borderRadius: { topLeft: 4, topRight: 4 }, borderSkipped: 'start', maxBarThickness: 36 }] },
+        options: baseOptions(false, (items) => b[items[0].dataIndex].tip),
+      });
+
+      // Категории: число уникальных сторонников
+      const catVotes = CATEGORIES.map(c => ({
+        c, v: groups.filter(g => g.category === c.id).reduce((s, g) => s + g.votes, 0),
+        n: groups.filter(g => g.category === c.id).length,
+      })).sort((a, b) => b.v - a.v);
+      drawChart('ch-cat', {
+        type: 'bar',
+        data: { labels: catVotes.map(x => `${x.c.icon} ${x.c.name}`), datasets: [{ label: 'Голосов', data: catVotes.map(x => x.v), backgroundColor: accent, borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: 'start', maxBarThickness: 24 }] },
+        options: (() => { const o = baseOptions(true); o.plugins.tooltip.callbacks.afterBody = (it) => `Идей: ${catVotes[it[0].dataIndex].n}`; return o; })(),
+      });
+
+      // Статусы
+      const stCounts = STATUSES.map(s => ({ s, n: groups.filter(g => g.statusId === s.id).length }));
+      const colorOf = (s) => s.color.startsWith('var(') ? cssVar(s.color.slice(4, -1)) : s.color;
+      drawChart('ch-status', {
+        type: 'bar',
+        data: { labels: stCounts.map(x => x.s.name), datasets: [{ label: 'Идей', data: stCounts.map(x => x.n), backgroundColor: stCounts.map(x => colorOf(x.s)), borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: 'start', maxBarThickness: 28 }] },
+        options: baseOptions(true),
+      });
+
+      // Топ-10
+      const top = [...groups].sort((a, b) => b.votes - a.votes).slice(0, 10);
+      drawChart('ch-top', {
+        type: 'bar',
+        data: { labels: top.map(g => clip(g.title, innerWidth < 600 ? 20 : 40)), datasets: [{ label: 'Голосов', data: top.map(g => g.votes), backgroundColor: accent, borderRadius: { topRight: 4, bottomRight: 4 }, borderSkipped: 'start', maxBarThickness: 22 }] },
+        options: (() => {
+          const o = baseOptions(true, (it) => top[it[0].dataIndex].title);
+          o.plugins.tooltip.callbacks.afterBody = (it) => { const g = top[it[0].dataIndex]; return `Статус: ${statusById[g.statusId].name}`; };
+          return o;
+        })(),
+      });
+
+      // Повторяющиеся обращения
+      const rep = groups.filter(g => g.members.length > 1).sort((a, b) => b.members.length - a.members.length || b.votes - a.votes);
+      $('#repeats').innerHTML = rep.length ? `
+        <table class="data">
+          <thead><tr><th>Проблема</th><th class="n">Написали<br>отдельно</th><th class="n">Голосов</th></tr></thead>
+          <tbody>${rep.map(g => `
+            <tr>
+              <td><b>${esc(g.title)}</b><br><span style="color:var(--muted);font-size:13px">${catById[g.category].icon} ${esc(catById[g.category].name)} · ${esc(statusById[g.statusId].name)}</span></td>
+              <td class="n">${g.members.length} ${plural(g.members.length, 'раз', 'раза', 'раз')}</td>
+              <td class="n">${g.votes}</td>
+            </tr>`).join('')}</tbody>
+        </table>` : `<p class="empty" style="padding:12px">Пока нет повторов — каждая идея уникальна.</p>`;
+    }
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (currentTab === 'stats') renderStats(); });
+
+    // ================== QR ==================
+    const defaultUrl = location.href.split('#')[0].split('?')[0];
+    $('#qr-url').value = lsGet('qr_url', defaultUrl);
+    function qrSvg(url) {
+      const qr = qrcode(0, 'M');
+      qr.addData(unescape(encodeURIComponent(url)));
+      qr.make();
+      return qr.createSvgTag({ cellSize: 8, margin: 2, scalable: true });
+    }
+    function renderQR() {
+      const url = $('#qr-url').value.trim() || defaultUrl;
+      const svg = qrSvg(url);
+      $('#qr-img').innerHTML = svg;
+      $('#poster-qr').innerHTML = svg;
+      $('#poster-url').textContent = url;
+    }
+    $('#qr-url').addEventListener('input', () => { lsSet('qr_url', $('#qr-url').value.trim()); renderQR(); });
+    $('#qr-print').addEventListener('click', () => { renderQR(); window.print(); });
+    $('#qr-copy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText($('#qr-url').value); toast('Ссылка скопирована'); } catch { toast('Не удалось скопировать'); }
+    });
+    $('#qr-download').addEventListener('click', () => {
+      const url = $('#qr-url').value.trim() || defaultUrl;
+      const qr = qrcode(0, 'M');
+      qr.addData(unescape(encodeURIComponent(url)));
+      qr.make();
+      const cell = 20, margin = 4, n = qr.getModuleCount(), size = (n + margin * 2) * cell;
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#000';
+      for (let r = 0; r < n; r++) for (let k = 0; k < n; k++)
+        if (qr.isDark(r, k)) ctx.fillRect((k + margin) * cell, (r + margin) * cell, cell, cell);
+      const a = document.createElement('a');
+      a.download = 'qr-golos-shkoly.png';
+      a.href = c.toDataURL('image/png');
+      a.click();
+    });
+
+    // ================== ВКЛАДКИ ==================
+    let currentTab = 'propose';
+    function showTab(name) {
+      currentTab = name;
+      document.querySelectorAll('nav.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
+      document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
+      if (name === 'stats') renderStats();
+      if (name === 'qr') renderQR();
+      lsSet('tab', name);
+    }
+    document.querySelector('nav.tabs').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-tab]');
+      if (b) showTab(b.dataset.tab);
+    });
+
+    // ================== СТАРТ ==================
+    reload();
+    checkAdminHash();
+    setInterval(reload, 60000);
   </script>
 </body>
 </html>
