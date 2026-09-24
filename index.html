@@ -286,10 +286,52 @@
 
     /* Плакат для печати */
     #poster { display: none; }
+    .admin-only { display: none !important; }
+    body.admin .admin-only { display: inline-flex !important; }
+    body.admin .guest-only { display: none !important; }
+    footer.foot { text-align: center; margin-top: 24px; }
+    .linkbtn { background: none; border: none; color: var(--muted); font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }
+
+    /* Отчёт для директора */
+    .report-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+    .report-controls label { margin-top: 0; }
+    @media (max-width: 560px) { .report-controls { grid-template-columns: 1fr; } }
+    #report {
+      background: #fff; color: #111;
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 28px 24px; font-size: 14px; line-height: 1.5;
+    }
+    #report h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
+    #report .sub { text-align: center; color: #555; margin: 0 0 16px; }
+    #report .addr { margin: 0 0 16px; }
+    #report h2 { font-size: 16px; margin: 22px 0 8px; padding-bottom: 4px; border-bottom: 2px solid #111; }
+    #report table { width: 100%; border-collapse: collapse; }
+    #report th, #report td { border: 1px solid #bbb; padding: 6px 8px; text-align: left; vertical-align: top; }
+    #report th { background: #f0f0ee; font-size: 12px; }
+    #report td.n, #report th.n { text-align: right; white-space: nowrap; }
+    #report .sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    #report .sum div { border: 1px solid #bbb; border-radius: 6px; padding: 8px; text-align: center; }
+    #report .sum b { display: block; font-size: 22px; }
+    @media (max-width: 560px) { #report { padding: 18px 12px; font-size: 13px; } #report .sum { grid-template-columns: 1fr 1fr; } }
+    #report .bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; height: 10px; background: #2a78d6; border-radius: 0 3px 3px 0; min-width: 2px; }
+    #report .late { color: #c62828; font-weight: 600; }
+    #report .note { color: #555; font-size: 12px; }
+    #report .sign { margin-top: 32px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
     @media print {
-      body { background: #fff; }
-      body > *:not(#poster) { display: none !important; }
-      #poster {
+      body.print-report { background: #fff; }
+      body.print-report > *:not(.wrap) { display: none !important; }
+      body.print-report .wrap > *:not(#tab-report) { display: none !important; }
+      body.print-report #tab-report { display: block !important; }
+      body.print-report .no-print { display: none !important; }
+      body.print-report .wrap { max-width: none; padding: 0; }
+      body.print-report #report { border: none; padding: 0; font-size: 12px; }
+      #report tr, #report .sum { break-inside: avoid; }
+    }
+    @media print {
+      body:not(.print-report) { background: #fff; }
+      body:not(.print-report) > *:not(#poster) { display: none !important; }
+      body:not(.print-report) #poster {
         display: flex !important; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; color: #000; min-height: 95vh; font-family: system-ui, sans-serif;
       }
@@ -313,10 +355,11 @@
       <button role="tab" data-tab="list" aria-selected="false">📋 Предложения</button>
       <button role="tab" data-tab="stats" aria-selected="false">📊 Статистика</button>
       <button role="tab" data-tab="qr" aria-selected="false">🔳 QR-код</button>
+      <button role="tab" data-tab="report" aria-selected="false" class="admin-only">📄 Отчёт директору</button>
     </nav>
 
     <div class="admin-banner">
-      <span>🔧 Режим совета: меняй статусы, сроки, объединяй дубли.</span>
+      <span>🔧 Режим совета: статус и срок — в карточке идеи, отчёт — во вкладке «Отчёт директору».</span>
       <button class="btn small ghost" id="admin-exit">Выйти</button>
     </div>
 
@@ -421,6 +464,30 @@
         </div>
       </div>
     </section>
+
+    <!-- ОТЧЁТ ДЛЯ ДИРЕКТОРА (только совет) -->
+    <section class="tab" id="tab-report">
+      <div class="card no-print">
+        <h2>Отчёт для директора</h2>
+        <p class="hint">Отчёт собирается автоматически из всех предложений. Нажми «Печать / PDF» и выбери «Сохранить как PDF», чтобы отправить файлом, или скопируй текст в мессенджер/почту.</p>
+        <div class="report-controls">
+          <div><label for="r-to">Кому</label><input id="r-to"></div>
+          <div><label for="r-from">От кого</label><input id="r-from"></div>
+          <div><label for="r-top">Сколько идей показать в «Требует решения»</label>
+            <select id="r-top"><option>5</option><option selected>10</option><option>20</option><option value="999">Все</option></select></div>
+          <div><label for="r-note">Комментарий / просьба к директору <span class="opt">(необязательно)</span></label><input id="r-note" maxlength="400" placeholder="Просим рассмотреть первые три предложения до 1 октября"></div>
+        </div>
+        <div class="qr-actions">
+          <button class="btn" id="r-print">🖨 Печать / PDF</button>
+          <button class="btn ghost" id="r-copy">📋 Скопировать текст</button>
+        </div>
+      </div>
+      <div id="report"></div>
+    </section>
+
+    <footer class="foot guest-only">
+      <button class="linkbtn" id="admin-login">🔧 Вход для совета</button>
+    </footer>
   </div>
 
   <div id="poster">
@@ -630,6 +697,7 @@
       renderList();
       renderSimilar();
       if (currentTab === 'stats') renderStats();
+      if (currentTab === 'report') renderReport();
     }
 
     // ================== ФОРМА ==================
@@ -783,10 +851,10 @@
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
       return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
     }
-    async function checkAdminHash() {
-      if (location.hash !== '#admin' || isAdmin) return;
+    async function checkAdminHash(force) {
+      if ((force !== true && location.hash !== '#admin') || isAdmin) return;
       const pin = prompt('PIN-код совета:');
-      history.replaceState(null, '', location.pathname + location.search);
+      if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search);
       if (pin === null) return;
       if (await sha256(pin.trim()) === ADMIN_PIN_HASH) {
         isAdmin = true;
@@ -798,15 +866,18 @@
       } else toast('Неверный PIN');
     }
     window.addEventListener('hashchange', checkAdminHash);
+    $('#admin-login').addEventListener('click', () => checkAdminHash(true));
     $('#admin-exit').addEventListener('click', () => {
       isAdmin = false; sessionStorageSet('admin', null);
       document.body.classList.remove('admin'); renderList();
+      if (currentTab === 'report') showTab('list');
     });
 
     function adminBox(g) {
       const others = groups.filter(x => x.id !== g.id).sort((a, b) => a.title.localeCompare(b.title));
       return `
       <div class="admin-box" data-admin="${esc(g.id)}">
+        <div class="full" style="font-weight:600;font-size:13px">🔧 Управление (видно только совету)</div>
         <div><label>Статус</label>
           <select name="status">${STATUSES.map(s => `<option value="${s.id}" ${s.id === g.statusId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
         <div><label>Срок до</label><input type="date" name="deadline" value="${esc(g.deadline)}"></div>
@@ -1041,6 +1112,132 @@
       a.click();
     });
 
+    // ================== ОТЧЁТ ДЛЯ ДИРЕКТОРА ==================
+    $('#r-to').value = lsGet('r_to', 'Директору школы');
+    $('#r-from').value = lsGet('r_from', 'Совет учащихся');
+    ['#r-to', '#r-from', '#r-top', '#r-note'].forEach(sel => $(sel).addEventListener('input', () => {
+      lsSet('r_to', $('#r-to').value); lsSet('r_from', $('#r-from').value); renderReport();
+    }));
+
+    function reportData() {
+      const today = new Date().toISOString().slice(0, 10);
+      const weekAgo = Date.now() - 7 * 864e5;
+      const byVotes = [...groups].sort((a, b) => b.votes - a.votes);
+      const isLate = (g) => g.deadline && g.deadline < today && !['done', 'rejected'].includes(g.statusId);
+      return {
+        today, isLate,
+        total: groups.length,
+        votes: groups.reduce((s, g) => s + g.votes, 0),
+        newWeek: groups.filter(g => new Date(g.created) >= weekAgo).length,
+        votesWeek: groups.reduce((s, g) => s + g.events.filter(e => new Date(e) >= weekAgo).length, 0),
+        need: byVotes.filter(g => g.statusId === 'new' || g.statusId === 'review').slice(0, Number($('#r-top').value)),
+        work: byVotes.filter(g => g.statusId === 'progress').sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999')),
+        done: byVotes.filter(g => g.statusId === 'done'),
+        rejected: byVotes.filter(g => g.statusId === 'rejected'),
+        cats: CATEGORIES.map(c => ({ c, n: groups.filter(g => g.category === c.id).length, v: groups.filter(g => g.category === c.id).reduce((s, g) => s + g.votes, 0) }))
+          .filter(x => x.n).sort((a, b) => b.v - a.v),
+        repeats: groups.filter(g => g.members.length > 1).sort((a, b) => b.members.length - a.members.length || b.votes - a.votes),
+      };
+    }
+    const fmtDateFull = (iso) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()} г.`; };
+
+    function renderReport() {
+      if (!isAdmin) return;
+      const r = reportData();
+      const deadlineCell = (g) => g.deadline ? `<span class="${r.isLate(g) ? 'late' : ''}">${fmtDeadline(g.deadline)}${r.isLate(g) ? ' — просрочено' : ''}</span>` : '—';
+      const ideasTable = (list, cols) => list.length ? `
+        <table><thead><tr><th>№</th><th>Предложение</th><th>Категория</th><th class="n">Голосов</th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
+        <tbody>${list.map((g, i) => `<tr><td>${i + 1}</td><td><b>${esc(g.title)}</b>${g.text ? `<div class="note">${esc(g.text)}</div>` : ''}</td>
+          <td>${esc(catById[g.category].name)}</td><td class="n">${g.votes}</td>${cols.map(c => `<td>${c[1](g)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+        : '<p class="note">Нет.</p>';
+      const maxCat = Math.max(1, ...r.cats.map(x => x.v));
+      const note = $('#r-note').value.trim();
+
+      $('#report').innerHTML = `
+        <p class="addr">${esc($('#r-to').value)}<br>от: ${esc($('#r-from').value)}</p>
+        <h1>Отчёт по предложениям учеников</h1>
+        <p class="sub">Платформа «Голос школы» · по состоянию на ${fmtDateFull(new Date())}</p>
+        ${note ? `<p><b>Просьба:</b> ${esc(note)}</p>` : ''}
+
+        <h2>1. Итоги</h2>
+        <div class="sum">
+          <div><b>${r.total}</b>предложений</div>
+          <div><b>${r.votes}</b>голосов учеников</div>
+          <div><b>${r.work.length}</b>в работе</div>
+          <div><b>${r.done.length}</b>выполнено</div>
+        </div>
+        <p>За последние 7 дней: новых предложений — <b>${r.newWeek}</b>, новых голосов и обращений — <b>${r.votesWeek}</b>.</p>
+
+        <h2>2. Требует решения администрации</h2>
+        <p class="note">Самые поддерживаемые предложения, по которым ещё нет решения (статусы «Новое» и «На рассмотрении»).</p>
+        ${ideasTable(r.need, [['Статус', g => esc(statusById[g.statusId].name)]])}
+
+        <h2>3. В работе</h2>
+        ${ideasTable(r.work, [['Срок', deadlineCell], ['Комментарий', g => esc(g.comment) || '—']])}
+
+        <h2>4. Выполнено</h2>
+        ${ideasTable(r.done, [['Комментарий', g => esc(g.comment) || '—']])}
+
+        <h2>5. Самые актуальные категории</h2>
+        ${r.cats.length ? `<table><thead><tr><th>Категория</th><th class="n">Идей</th><th class="n">Голосов</th><th style="width:35%"></th></tr></thead><tbody>
+          ${r.cats.map(x => `<tr><td>${esc(x.c.name)}</td><td class="n">${x.n}</td><td class="n">${x.v}</td><td><div class="bar" style="width:${Math.round(x.v / maxCat * 100)}%"></div></td></tr>`).join('')}
+        </tbody></table>` : '<p class="note">Нет данных.</p>'}
+
+        <h2>6. Повторяющиеся обращения</h2>
+        <p class="note">Проблемы, о которых ученики написали независимо друг от друга несколько раз.</p>
+        ${r.repeats.length ? `<table><thead><tr><th>Проблема</th><th class="n">Обращений</th><th class="n">Голосов</th><th>Статус</th></tr></thead><tbody>
+          ${r.repeats.map(g => `<tr><td>${esc(g.title)}</td><td class="n">${g.members.length}</td><td class="n">${g.votes}</td><td>${esc(statusById[g.statusId].name)}</td></tr>`).join('')}
+        </tbody></table>` : '<p class="note">Повторов нет.</p>'}
+
+        ${r.rejected.length ? `<h2>7. Отклонено</h2>${ideasTable(r.rejected, [['Причина', g => esc(g.comment) || '—']])}` : ''}
+
+        <div class="sign">
+          <span>${esc($('#r-from').value)}</span>
+          <span>Подпись: ____________________</span>
+        </div>`;
+    }
+
+    function reportText() {
+      const r = reportData();
+      const line = (g, i) => `${i + 1}. ${g.title} — ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`;
+      const note = $('#r-note').value.trim();
+      const parts = [
+        `${$('#r-to').value}`,
+        `от: ${$('#r-from').value}`,
+        '',
+        `ОТЧЁТ ПО ПРЕДЛОЖЕНИЯМ УЧЕНИКОВ на ${fmtDateFull(new Date())}`,
+        note ? `\nПросьба: ${note}` : '',
+        '',
+        `Всего предложений: ${r.total}, голосов: ${r.votes}. В работе: ${r.work.length}, выполнено: ${r.done.length}.`,
+        `За 7 дней: +${r.newWeek} ${plural(r.newWeek, 'предложение', 'предложения', 'предложений')}, +${r.votesWeek} ${plural(r.votesWeek, 'голос', 'голоса', 'голосов')}.`,
+        '',
+        'ТРЕБУЕТ РЕШЕНИЯ:',
+        ...(r.need.length ? r.need.map(line) : ['нет']),
+        '',
+        'В РАБОТЕ:',
+        ...(r.work.length ? r.work.map((g, i) => line(g, i) + (g.deadline ? `, срок до ${fmtDeadline(g.deadline)}${r.isLate(g) ? ' (просрочено)' : ''}` : '')) : ['нет']),
+        '',
+        'ВЫПОЛНЕНО:',
+        ...(r.done.length ? r.done.map(line) : ['нет']),
+        '',
+        'КАТЕГОРИИ (голосов):',
+        ...r.cats.map(x => `— ${x.c.name}: ${x.v}`),
+      ];
+      if (r.repeats.length) parts.push('', 'ПОВТОРЯЮЩИЕСЯ ОБРАЩЕНИЯ:', ...r.repeats.map(g => `— ${g.title}: написали ${g.members.length} ${plural(g.members.length, 'раз', 'раза', 'раз')}, ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`));
+      return parts.filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
+    }
+
+    $('#r-print').addEventListener('click', () => {
+      renderReport();
+      document.body.classList.add('print-report');
+      window.print();
+    });
+    window.addEventListener('afterprint', () => document.body.classList.remove('print-report'));
+    $('#r-copy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(reportText()); toast('Текст отчёта скопирован'); }
+      catch { toast('Не удалось скопировать'); }
+    });
+
     // ================== ВКЛАДКИ ==================
     let currentTab = 'propose';
     function showTab(name) {
@@ -1049,6 +1246,7 @@
       document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('active', s.id === 'tab-' + name));
       if (name === 'stats') renderStats();
       if (name === 'qr') renderQR();
+      if (name === 'report') renderReport();
       lsSet('tab', name);
     }
     document.querySelector('nav.tabs').addEventListener('click', (e) => {
