@@ -7,7 +7,7 @@
   <meta name="description" content="Предложения учеников: пиши идеи, поддерживай чужие, следи за статусом.">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+  <script src="qrcode.min.js"></script>
   <style>
     :root {
       color-scheme: light;
@@ -81,7 +81,26 @@
 
     header.top {
       padding: 28px 0 8px;
+      position: relative;
     }
+    .council-btn { position: absolute; top: 24px; right: 0; }
+    header.top h1 { padding-right: 110px; }
+    .quick {
+      margin-top: 12px; padding: 10px;
+      border: 1px dashed var(--serious); border-radius: 10px;
+    }
+    .quick .qt { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; }
+    .quick .qb { display: flex; flex-wrap: wrap; gap: 6px; }
+    .quick .qb button {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--border); background: var(--surface); color: var(--ink);
+      border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer;
+    }
+    .quick .qb button i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .quick .qb button.cur { border-color: var(--ink); font-weight: 700; box-shadow: inset 0 0 0 1px var(--ink); }
+    .quick details { margin-top: 8px; }
+    .quick details > summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+    .quick .admin-box { border: none; padding: 8px 0 0; margin-top: 0; }
     header.top h1 { margin: 0; font-size: 28px; letter-spacing: -0.01em; }
     header.top p { margin: 4px 0 0; color: var(--ink-2); }
 
@@ -347,6 +366,7 @@
   <div class="wrap">
     <header class="top">
       <h1>Голос школы</h1>
+      <button class="btn small ghost council-btn guest-only" id="admin-login-top">🔐 Совет</button>
       <p>Напиши, что хочешь изменить в школе. Поддержи идеи других — самые популярные берём в работу.</p>
     </header>
 
@@ -376,8 +396,6 @@
           <label for="f-text">Подробнее <span class="opt">(необязательно)</span></label>
           <textarea id="f-text" maxlength="1000" placeholder="Почему это важно? Как это можно сделать?"></textarea>
 
-          <label>Категория</label>
-          <div class="chips" id="f-cats"></div>
 
           <label for="f-class">Класс <span class="opt">(необязательно)</span></label>
           <select id="f-class">
@@ -515,6 +533,7 @@
       { id: 'clothes', name: 'Форма и дресс-код',   icon: '👕' },
       { id: 'comfort', name: 'Здание и комфорт',    icon: '🏫' },
       { id: 'clubs',   name: 'Кружки и секции',     icon: '🎨' },
+      { id: 'rules',   name: 'Правила школы',       icon: '📏' },
       { id: 'other',   name: 'Другое',              icon: '💡' },
     ];
     const STATUSES = [
@@ -525,6 +544,31 @@
       { id: 'rejected', name: 'Отклонено',        color: 'var(--critical)' },
     ];
     const CLASSES = ['5', '6', '7', '8', '9', '10', '11'];
+
+    // Автоматическая категория: начала слов, по которым узнаём тему (_ = пробел)
+    const CATEGORY_WORDS = {
+      food:    'столов еда еды еду едой обед завтрак полдник буфет пищ меню булоч пирож пицц сок чай кофе вкусн невкусн порци горяч салат котлет каш суп фрукт перекус напит голод кормят кормит повар сладк снек выпечк бутерброд вегетариан',
+      clothes: 'одежд одеват одеться носить форм дресс джинс кроссов кед футболк худи толстовк юбк брюк галстук пиджак рубашк костюм причес макияж маникюр серьг украшен сменк сменн обув',
+      sport:   'спорт футбол баскетбол волейбол турнир физкульт физр физ-р бассейн тренаж тренир бег соревнован лыж теннис стадион зарядк качалк йог фитнес спартакиад эстафет гимнаст',
+      events:  'дискотек праздн концерт мероприят вечерин выпускн ярмарк квест конкурс фестивал экскурс поход новогод елк кино фильм выставк флешмоб музык песн танц радио караоке день_учител хэллоуин хеллоуин косплей фотозон тематическ',
+      study:   'урок домашк дз оценк оцен контрольн экзамен огэ егэ учител расписан предмет учеб учит тест дневник четверт каникул звонок звонк задан английск математик физик химик истори литератур чтени читал читат книг библиотек репетитор консультац',
+      comfort: 'туалет кулер питьев розетк wi-fi wifi вайфай вай-фай вай_фай интернет отоплен холодн жарк душн проветр кондиционер окн ремонт скамейк лавочк диван пуф шкафчик раздевалк гардероб лифт свет лампочк чист грязн мусор мыл бумаг зеркал лестниц двор площадк парковк зарядн коридор кабинет парт стул зона отдых уют камер охран',
+      clubs:   'кружок кружк секци клуб робот шахмат театр хор рисован художеств программир дебат волонт газет журнал студи олимпиад лаборатор мастер-класс мастерск 3d подкаст блог медиа',
+      rules:   'телефон смартфон гаджет перемен опоздан опаздыв дежур правил запрет разреш дисциплин распоряд наказан замечан пропуск охранник вход выход',
+    };
+    const CAT_STEMS = Object.entries(CATEGORY_WORDS).map(([k, v]) => [k, v.split(' ').map(w => w.replace(/_/g, ' '))]);
+    function classify(text) {
+      const t = ' ' + String(text).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9\-\s]/g, ' ').replace(/\s+/g, ' ') + ' ';
+      const words = t.trim().split(' ');
+      let best = 'other', bestScore = 0;
+      for (const [cat, stems] of CAT_STEMS) {
+        let score = 0;
+        for (const stem of stems)
+          if (stem.includes(' ') ? t.includes(' ' + stem) : words.some(w => w.startsWith(stem))) score++;
+        if (score > bestScore) { best = cat; bestScore = score; }
+      }
+      return best;
+    }
 
     // Типы записей в app_data.item_type
     const T = { SUG: 'suggestion', VOTE: 'vote', STATUS: 'status', MERGE: 'merge' };
@@ -665,10 +709,9 @@
 
       groups = Object.values(map).map(g => {
         const root = g.members.find(m => m.id === g.id);
-        const catCount = {};
-        g.members.forEach(m => { catCount[m.data.category] = (catCount[m.data.category] || 0) + 1; });
-        const category = root.data.category in catById ? root.data.category
-          : (Object.entries(catCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'other');
+        const manualCat = g.status?.data?.category;
+        const category = catById[manualCat] ? manualCat
+          : classify(g.members.map(m => m.data.title + ' ' + (m.data.text || '')).join(' '));
         return {
           ...g,
           root,
@@ -682,6 +725,7 @@
           statusId: statusById[g.status?.data?.status] ? g.status.data.status : 'new',
           deadline: g.status?.data?.deadline || '',
           comment: g.status?.data?.comment || '',
+          manualCat: catById[manualCat] ? manualCat : '',
         };
       });
     }
@@ -701,11 +745,6 @@
     }
 
     // ================== ФОРМА ==================
-    $('#f-cats').innerHTML = CATEGORIES.map((c, i) => `
-      <label class="chip-radio" style="margin:0;font-weight:400">
-        <input type="radio" name="cat" value="${c.id}" ${i === CATEGORIES.length - 1 ? 'checked' : ''}>
-        <span>${c.icon} ${esc(c.name)}</span>
-      </label>`).join('');
     $('#f-class').innerHTML += CLASSES.map(c => `<option value="${c}">${c} класс</option>`).join('');
 
     function renderSimilar() {
@@ -746,7 +785,7 @@
         data: {
           title,
           text: $('#f-text').value.trim(),
-          category: document.querySelector('input[name="cat"]:checked')?.value || 'other',
+          category: classify(title + ' ' + $('#f-text').value),
           class: $('#f-class').value,
           device: DEVICE,
         },
@@ -834,7 +873,7 @@
                   <summary>Ещё ${others.length} ${plural(others.length, 'похожее обращение', 'похожих обращения', 'похожих обращений')}</summary>
                   <ul>${others.map(m => `<li><b>${esc(m.data.title)}</b>${m.data.text ? ' — ' + esc(m.data.text) : ''}</li>`).join('')}</ul>
                 </details>` : ''}
-              ${isAdmin ? adminBox(g) : ''}
+              ${isAdmin ? quickBox(g) : ''}
             </div>
           </div>
         </article>`;
@@ -867,20 +906,39 @@
     }
     window.addEventListener('hashchange', checkAdminHash);
     $('#admin-login').addEventListener('click', () => checkAdminHash(true));
+    $('#admin-login-top').addEventListener('click', () => checkAdminHash(true));
     $('#admin-exit').addEventListener('click', () => {
       isAdmin = false; sessionStorageSet('admin', null);
       document.body.classList.remove('admin'); renderList();
       if (currentTab === 'report') showTab('list');
     });
 
+    const QUICK = [
+      ['review', '👀 На рассмотрение'], ['progress', '🚀 Взять в работу'], ['done', '✅ Выполнено'], ['rejected', '✕ Отклонить'], ['new', '↺ Новое'],
+    ];
+    function quickBox(g) {
+      return `
+      <div class="quick" data-admin="${esc(g.id)}">
+        <div class="qt">🔧 Статус (видно только совету)</div>
+        <div class="qb">${QUICK.map(([id, label]) => `
+          <button data-quick="${id}" class="${g.statusId === id ? 'cur' : ''}"><i style="background:${statusById[id].color}"></i>${label}</button>`).join('')}
+        </div>
+        <details ${g.statusId === 'progress' && !g.deadline ? 'open' : ''}>
+          <summary>✏️ Срок, ответ, категория, дубли</summary>
+          ${adminBox(g)}
+        </details>
+      </div>`;
+    }
     function adminBox(g) {
       const others = groups.filter(x => x.id !== g.id).sort((a, b) => a.title.localeCompare(b.title));
       return `
-      <div class="admin-box" data-admin="${esc(g.id)}">
-        <div class="full" style="font-weight:600;font-size:13px">🔧 Управление (видно только совету)</div>
+      <div class="admin-box">
         <div><label>Статус</label>
           <select name="status">${STATUSES.map(s => `<option value="${s.id}" ${s.id === g.statusId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
         <div><label>Срок до</label><input type="date" name="deadline" value="${esc(g.deadline)}"></div>
+        <div class="full"><label>Категория (определяется автоматически, можно поправить)</label>
+          <select name="category"><option value="">Авто: ${esc(catById[g.category].name)}</option>
+          ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === g.manualCat ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select></div>
         <div class="full"><label>Ответ совета</label><input name="comment" maxlength="300" value="${esc(g.comment)}" placeholder="Например: договорились с директором, пробуем с октября"></div>
         <div class="full row">
           <button class="btn small" data-act="save">💾 Сохранить</button>
@@ -894,7 +952,24 @@
       </div>`;
     }
 
+    function saveStatus(g, patch) {
+      return db.from(TABLE).insert({
+        item_type: T.STATUS,
+        data: { suggestion_id: g.id, status: g.statusId, deadline: g.deadline, comment: g.comment, category: g.manualCat, ...patch },
+      });
+    }
     $('#list').addEventListener('click', async (e) => {
+      const q = e.target.closest('[data-quick]');
+      if (q && isAdmin) {
+        const g = groups.find(x => x.id == q.closest('[data-admin]').dataset.admin);
+        if (!g || g.statusId === q.dataset.quick) return;
+        q.disabled = true;
+        const { error } = await saveStatus(g, { status: q.dataset.quick });
+        if (error) { toast('Ошибка: ' + error.message); q.disabled = false; return; }
+        toast(`Статус: ${statusById[q.dataset.quick].name}` + (q.dataset.quick === 'progress' && !g.deadline ? ' — укажи срок ниже' : ''));
+        await reload();
+        return;
+      }
       const b = e.target.closest('[data-act]');
       if (!b || !isAdmin) return;
       const box = b.closest('[data-admin]');
@@ -905,10 +980,7 @@
       b.disabled = true;
 
       if (b.dataset.act === 'save') {
-        ({ error } = await db.from(TABLE).insert({
-          item_type: T.STATUS,
-          data: { suggestion_id: g.id, status: val('status'), deadline: val('deadline'), comment: val('comment').trim() },
-        }));
+        ({ error } = await saveStatus(g, { status: val('status'), deadline: val('deadline'), comment: val('comment').trim(), category: val('category') }));
         if (!error) toast('Сохранено');
       }
       if (b.dataset.act === 'merge') {
@@ -998,7 +1070,30 @@
         scales: horizontal ? { x: valueAxis, y: catAxis } : { x: catAxis, y: valueAxis },
       };
     }
+    // Подписи со значениями прямо на столбиках
+    const valueLabels = {
+      id: 'valueLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const horizontal = chart.options.indexAxis === 'y';
+        ctx.save();
+        ctx.font = '600 12px system-ui, -apple-system, "Segoe UI", sans-serif';
+        ctx.fillStyle = cssVar('--ink');
+        chart.data.datasets.forEach((ds, di) => {
+          chart.getDatasetMeta(di).data.forEach((bar, i) => {
+            const v = ds.data[i];
+            if (!v) return;
+            if (horizontal) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(v, bar.x + 6, bar.y); }
+            else { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(v, bar.x, bar.y - 4); }
+          });
+        });
+        ctx.restore();
+      },
+    };
     function drawChart(id, config) {
+      config.plugins = [valueLabels];
+      const horizontal = config.options.indexAxis === 'y';
+      config.options.layout = { padding: horizontal ? { right: 30 } : { top: 20 } };
       if (charts[id]) charts[id].destroy();
       charts[id] = new Chart(document.getElementById(id), config);
     }
@@ -1073,8 +1168,10 @@
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (currentTab === 'stats') renderStats(); });
 
     // ================== QR ==================
-    const defaultUrl = location.href.split('#')[0].split('?')[0];
-    $('#qr-url').value = lsGet('qr_url', defaultUrl);
+    // Основной (публичный) адрес сайта — именно он попадает в QR-код
+    const SITE_URL = 'https://workshop-assel8.vercel.app/';
+    const defaultUrl = SITE_URL;
+    $('#qr-url').value = defaultUrl;
     function qrSvg(url) {
       const qr = qrcode(0, 'M');
       qr.addData(unescape(encodeURIComponent(url)));
@@ -1083,12 +1180,14 @@
     }
     function renderQR() {
       const url = $('#qr-url').value.trim() || defaultUrl;
-      const svg = qrSvg(url);
+      let svg;
+      try { svg = qrSvg(url); }
+      catch (e) { $('#qr-img').innerHTML = '<p class="hint">Не удалось построить QR-код. Обнови страницу.</p>'; return; }
       $('#qr-img').innerHTML = svg;
       $('#poster-qr').innerHTML = svg;
       $('#poster-url').textContent = url;
     }
-    $('#qr-url').addEventListener('input', () => { lsSet('qr_url', $('#qr-url').value.trim()); renderQR(); });
+    $('#qr-url').addEventListener('input', renderQR);
     $('#qr-print').addEventListener('click', () => { renderQR(); window.print(); });
     $('#qr-copy').addEventListener('click', async () => {
       try { await navigator.clipboard.writeText($('#qr-url').value); toast('Ссылка скопирована'); } catch { toast('Не удалось скопировать'); }
