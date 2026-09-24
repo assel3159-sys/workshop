@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Data</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      background: #f5f6f8;
+      color: #222;
+    }
+    h1 { margin-top: 0; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.08);
+    }
+    label { display: block; font-size: 14px; margin: 8px 0 4px; }
+    input, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font: inherit;
+    }
+    textarea { min-height: 90px; font-family: monospace; }
+    button {
+      margin-top: 12px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #3ecf8e;
+      color: #fff;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { opacity: .9; }
+    button.delete { background: #e5484d; margin-top: 0; padding: 4px 10px; font-size: 13px; }
+    button.secondary { background: #666; }
+    .toolbar { display: flex; gap: 8px; align-items: center; }
+    .toolbar input { flex: 1; }
+    .toolbar button { margin-top: 0; }
+    .item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .type { font-weight: 600; }
+    .meta { font-size: 12px; color: #888; }
+    pre {
+      background: #f0f1f3;
+      padding: 8px;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 8px 0 0;
+      font-size: 13px;
+    }
+    #status { font-size: 14px; min-height: 20px; }
+    .error { color: #e5484d; }
+    .ok { color: #1a9e62; }
+  </style>
+</head>
+<body>
+  <h1>App Data</h1>
+
+  <div class="card">
+    <h2>Добавить запись</h2>
+    <form id="add-form">
+      <label for="item_type">item_type</label>
+      <input id="item_type" required placeholder="например: note">
+      <label for="data">data (JSON)</label>
+      <textarea id="data" placeholder='{"title": "Привет", "text": "Мир"}'>{}</textarea>
+      <button type="submit">Сохранить</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <input id="filter" placeholder="Фильтр по item_type">
+      <button class="secondary" id="reload">Обновить</button>
+    </div>
+    <p id="status"></p>
+    <div id="list"></div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://ossvjewxhcrawwxbadqd.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_yV89rVEs5iIibMJIApTN-g_TZtT9ewN';
+    const TABLE = 'app_data';
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const listEl = document.getElementById('list');
+    const statusEl = document.getElementById('status');
+    const filterEl = document.getElementById('filter');
+
+    function setStatus(text, cls = '') {
+      statusEl.textContent = text;
+      statusEl.className = cls;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    async function loadItems() {
+      setStatus('Загрузка...');
+      let query = db.from(TABLE).select('*').order('created_at', { ascending: false });
+      const filter = filterEl.value.trim();
+      if (filter) query = query.eq('item_type', filter);
+
+      const { data, error } = await query;
+      if (error) {
+        setStatus('Ошибка: ' + error.message, 'error');
+        listEl.innerHTML = '';
+        return;
+      }
+
+      setStatus(`Записей: ${data.length}`);
+      listEl.innerHTML = data.map(row => `
+        <div class="card">
+          <div class="item-head">
+            <div>
+              <span class="type">${escapeHtml(row.item_type ?? '')}</span>
+              <div class="meta">id: ${escapeHtml(row.id)} · ${new Date(row.created_at).toLocaleString()}</div>
+            </div>
+            <button class="delete" data-id="${escapeHtml(row.id)}">Удалить</button>
+          </div>
+          <pre>${escapeHtml(JSON.stringify(row.data, null, 2))}</pre>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('add-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const itemType = document.getElementById('item_type').value.trim();
+      let json;
+      try {
+        json = JSON.parse(document.getElementById('data').value || '{}');
+      } catch (err) {
+        setStatus('Некорректный JSON: ' + err.message, 'error');
+        return;
+      }
+
+      const { error } = await db.from(TABLE).insert({ item_type: itemType, data: json });
+      if (error) {
+        setStatus('Ошибка сохранения: ' + error.message, 'error');
+        return;
+      }
+      document.getElementById('data').value = '{}';
+      setStatus('Сохранено', 'ok');
+      loadItems();
+    });
+
+    listEl.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button.delete');
+      if (!btn) return;
+      if (!confirm('Удалить запись?')) return;
+      const { error } = await db.from(TABLE).delete().eq('id', btn.dataset.id);
+      if (error) {
+        setStatus('Ошибка удаления: ' + error.message, 'error');
+        return;
+      }
+      loadItems();
+    });
+
+    document.getElementById('reload').addEventListener('click', loadItems);
+    filterEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') loadItems(); });
+
+    loadItems();
+  </script>
+</body>
+</html>
