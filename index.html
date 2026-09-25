@@ -389,7 +389,7 @@
       <div class="card">
         <h2>Твоё предложение</h2>
         <p class="hint">Анонимно. Имя не нужно.</p>
-        <form id="form">
+        <form id="form" autocomplete="off">
           <label for="f-title">Коротко: что предлагаешь?</label>
           <input id="f-title" maxlength="120" required placeholder="Например: свободная одежда по пятницам" autocomplete="off">
           <div id="similar"></div>
@@ -516,7 +516,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для совета</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 6</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 7</div>
     </footer>
   </div>
 
@@ -777,9 +777,16 @@
       if (keep && list.includes(keep)) $('#f-letter').value = keep;
     }
     $('#f-class').addEventListener('change', () => fillLetters());
-    // запоминаем класс ученика, чтобы не выбирать заново
-    $('#f-class').value = lsGet('my_class', '');
-    fillLetters(lsGet('my_letter', ''));
+    // При каждом открытии и обновлении страницы форма пустая
+    function clearForm() {
+      $('#f-title').value = '';
+      $('#f-text').value = '';
+      $('#f-class').value = '';
+      fillLetters();
+      $('#similar').innerHTML = '';
+    }
+    clearForm();
+    window.addEventListener('pageshow', clearForm);
 
     function renderSimilar() {
       const q = tokens($('#f-title').value);
@@ -828,10 +835,7 @@
       });
       btn.disabled = false;
       if (error) { toast('Ошибка: ' + error.message); return; }
-      lsSet('my_class', $('#f-class').value);
-      lsSet('my_letter', $('#f-letter').value);
-      $('#f-title').value = '';
-      $('#f-text').value = '';
+      clearForm();
       $('#similar').innerHTML = '';
       toast('Спасибо! Предложение отправлено 🎉');
       await reload();
