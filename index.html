@@ -196,7 +196,7 @@
     .kind-opt.concern input:checked + span { border-color: var(--serious); background: var(--concern-soft); }
     .kind-opt input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    .kind-tabs { display: grid; grid-template-columns: repeat(3, auto); justify-content: start; gap: 6px; margin-bottom: 12px; }
+    .kind-tabs { display: grid; grid-template-columns: repeat(2, auto); justify-content: start; gap: 6px; margin-bottom: 12px; }
     .kind-tabs button { white-space: nowrap; }
     .kind-tabs button {
       border: 1px solid var(--border); background: var(--card); color: var(--ink-2);
@@ -621,7 +621,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 19</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 20</div>
     </footer>
   </div>
 
@@ -1033,7 +1033,7 @@
       return `<span class="status"><i style="background:${s.color}"></i>${esc(s.name)}</span>`;
     }
 
-    let listKind = 'all';
+    let listKind = 'idea';
     $('#kind-tabs').addEventListener('click', (e) => {
       const b = e.target.closest('[data-kind]');
       if (b) { listKind = b.dataset.kind; renderList(); }
@@ -1041,10 +1041,10 @@
     function renderList() {
       const q = $('#q').value.trim().toLowerCase();
       const cat = $('#fl-cat').value, st = $('#fl-status').value, sort = $('#fl-sort').value;
-      $('#kind-tabs').innerHTML = [['all', 'Все'], ['idea', '💡 Идеи'], ['concern', '😟 Беспокоит']]
-        .map(([k, name]) => `<button data-kind="${k}" aria-pressed="${listKind === k}">${name}<span class="cnt">${k === 'all' ? groups.length : groups.filter(g => g.kind === k).length}</span></button>`).join('');
+      $('#kind-tabs').innerHTML = [['idea', '💡 Идеи'], ['concern', '😟 Беспокоит']]
+        .map(([k, name]) => `<button data-kind="${k}" aria-pressed="${listKind === k}">${name}<span class="cnt">${groups.filter(g => g.kind === k).length}</span></button>`).join('');
       let list = groups.filter(g =>
-        (listKind === 'all' || g.kind === listKind) &&
+        g.kind === listKind &&
         (!cat || g.category === cat) &&
         (!st || g.statusId === st) &&
         (!q || g.members.some(m => (m.data.title + ' ' + (m.data.text || '')).toLowerCase().includes(q))));
