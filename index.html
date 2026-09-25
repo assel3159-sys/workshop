@@ -342,6 +342,9 @@
     /* Отчёт для директора */
     .report-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
     .report-controls label { margin-top: 0; }
+    .report-controls .full { grid-column: 1 / -1; }
+    .r-main { min-height: 220px; line-height: 1.5; }
+    #report .main-text { white-space: pre-line; font-size: 15px; line-height: 1.6; margin: 0; }
     @media (max-width: 560px) { .report-controls { grid-template-columns: 1fr; } }
     #report {
       background: #fff; color: #111;
@@ -535,17 +538,25 @@
     <section class="tab" id="tab-report">
       <div class="card no-print">
         <h2>Отчёт для директора</h2>
-        <p class="hint">Отчёт собирается автоматически из всех предложений. Нажми «Печать / PDF» и выбери «Сохранить как PDF», чтобы отправить файлом, или скопируй текст в мессенджер/почту.</p>
+        <p class="hint">Напиши своими словами главное для директора. Ниже сайт сам добавит цифры и таблицы по всем предложениям. Потом нажми «Печать / PDF» и выбери «Сохранить как PDF», чтобы отправить файлом, или скопируй текст в мессенджер/почту.</p>
         <div class="report-controls">
           <div><label for="r-to">Кому</label><input id="r-to"></div>
           <div><label for="r-from">От кого</label><input id="r-from"></div>
-          <div><label for="r-top">Сколько идей показать в «Требует решения»</label>
-            <select id="r-top"><option>5</option><option selected>10</option><option>20</option><option value="999">Все</option></select></div>
-          <div><label for="r-note">Комментарий / просьба к директору <span class="opt">(необязательно)</span></label><input id="r-note" maxlength="400" placeholder="Просим рассмотреть первые три предложения до 1 октября"></div>
+          <div class="full">
+            <label for="r-main">Отчёт для директора</label>
+            <textarea id="r-main" class="r-main" maxlength="5000" placeholder="Например:
+Больше всего ученики хотят свободную одежду по пятницам — за это уже 52 голоса.
+Реально хорошие предложения:
+1. Кулеры с водой на каждом этаже — недорого и нужно всем.
+2. Музыкальная перемена по пятницам.
+Просим рассмотреть эти предложения до 1 октября."></textarea>
+            <p class="hint" style="margin:6px 0 0">Текст сохраняется на этом устройстве, пока ты его не очистишь.</p>
+          </div>
         </div>
         <div class="qr-actions">
           <button class="btn" id="r-print">🖨 Печать / PDF</button>
           <button class="btn ghost" id="r-copy">📋 Скопировать текст</button>
+          <button class="btn ghost" id="r-clear">🧹 Очистить текст</button>
         </div>
       </div>
       <div id="report"></div>
@@ -553,7 +564,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 11</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 12</div>
     </footer>
   </div>
 
@@ -1332,9 +1343,14 @@
     // ================== ОТЧЁТ ДЛЯ ДИРЕКТОРА ==================
     $('#r-to').value = lsGet('r_to', 'Директору школы');
     $('#r-from').value = lsGet('r_from2', 'Президент школы и её команда');
-    ['#r-to', '#r-from', '#r-top', '#r-note'].forEach(sel => $(sel).addEventListener('input', () => {
-      lsSet('r_to', $('#r-to').value); lsSet('r_from2', $('#r-from').value); renderReport();
+    $('#r-main').value = lsGet('r_main', '');
+    ['#r-to', '#r-from', '#r-main'].forEach(sel => $(sel).addEventListener('input', () => {
+      lsSet('r_to', $('#r-to').value); lsSet('r_from2', $('#r-from').value); lsSet('r_main', $('#r-main').value); renderReport();
     }));
+    $('#r-clear').addEventListener('click', () => {
+      if (!$('#r-main').value.trim()) return;
+      $('#r-main').value = ''; lsSet('r_main', ''); renderReport(); $('#r-main').focus();
+    });
 
     function reportData() {
       const today = new Date().toISOString().slice(0, 10);
@@ -1347,7 +1363,7 @@
         votes: groups.reduce((s, g) => s + g.votes, 0),
         newWeek: groups.filter(g => new Date(g.created) >= weekAgo).length,
         votesWeek: groups.reduce((s, g) => s + g.events.filter(e => new Date(e) >= weekAgo).length, 0),
-        need: byVotes.filter(g => g.statusId === 'new' || g.statusId === 'review').slice(0, Number($('#r-top').value)),
+        need: byVotes.filter(g => g.statusId === 'new' || g.statusId === 'review'),
         work: byVotes.filter(g => g.statusId === 'progress').sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999')),
         done: byVotes.filter(g => g.statusId === 'done'),
         rejected: byVotes.filter(g => g.statusId === 'rejected'),
@@ -1368,13 +1384,13 @@
           <td>${esc(catById[g.category].name)}</td><td class="n">${g.votes}</td>${cols.map(c => `<td>${c[1](g)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
         : '<p class="note">Нет.</p>';
       const maxCat = Math.max(1, ...r.cats.map(x => x.v));
-      const note = $('#r-note').value.trim();
+      const main = $('#r-main').value.trim();
 
       $('#report').innerHTML = `
         <p class="addr">${esc($('#r-to').value)}<br>от: ${esc($('#r-from').value)}</p>
         <h1>Отчёт по предложениям учеников</h1>
         <p class="sub">Платформа «Голос школы» · по состоянию на ${fmtDateFull(new Date())}</p>
-        ${note ? `<p><b>Просьба:</b> ${esc(note)}</p>` : ''}
+        ${main ? `<h2>Главное от президента школы и её команды</h2><p class="main-text">${esc(main)}</p>` : ''}
 
         <h2>1. Итоги</h2>
         <div class="sum">
@@ -1417,13 +1433,13 @@
     function reportText() {
       const r = reportData();
       const line = (g, i) => `${i + 1}. ${g.title} — ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`;
-      const note = $('#r-note').value.trim();
+      const main = $('#r-main').value.trim();
       const parts = [
         `${$('#r-to').value}`,
         `от: ${$('#r-from').value}`,
         '',
         `ОТЧЁТ ПО ПРЕДЛОЖЕНИЯМ УЧЕНИКОВ на ${fmtDateFull(new Date())}`,
-        note ? `\nПросьба: ${note}` : '',
+        main ? `\nГЛАВНОЕ:\n${main}` : '',
         '',
         `Всего предложений: ${r.total}, голосов: ${r.votes}. В работе: ${r.work.length}, выполнено: ${r.done.length}.`,
         `За 7 дней: +${r.newWeek} ${plural(r.newWeek, 'предложение', 'предложения', 'предложений')}, +${r.votesWeek} ${plural(r.votesWeek, 'голос', 'голоса', 'голосов')}.`,
