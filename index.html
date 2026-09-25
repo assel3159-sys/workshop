@@ -293,6 +293,7 @@
       font-size: 18px; cursor: pointer;
     }
     .votebox button.done { background: var(--accent); color: var(--accent-ink); }
+    .voted-note { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: center; line-height: 1.2; }
     .votebox button:disabled { cursor: default; }
     .sug h3 { font-size: 17px; overflow-wrap: anywhere; }
     .sug .text { color: var(--ink-2); margin: 4px 0 0; font-size: 15px; overflow-wrap: anywhere; white-space: pre-line; }
@@ -620,7 +621,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 17</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 18</div>
     </footer>
   </div>
 
@@ -1083,6 +1084,7 @@
               <button data-vote="${esc(g.id)}" class="${g.voted ? 'done' : ''}" ${g.voted ? 'disabled' : ''}
                 title="${g.own ? 'Это написал(а) ты' : g.voted ? 'Ты уже поддержал(а)' : g.kind === 'concern' ? 'Меня тоже беспокоит' : 'Поддержать'}"
                 aria-label="${g.kind === 'concern' ? 'Меня тоже беспокоит' : 'Поддержать'}">${g.voted ? '✓' : '👍'}</button>
+              ${g.voted ? `<div class="voted-note">${g.own ? 'это твоё' : 'ты уже за'}</div>` : ''}
             </div>
             <div>
               <h3>${isAdmin && g.starred ? '<span title="В избранном">⭐</span> ' : ''}${esc(g.title)}</h3>
