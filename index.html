@@ -516,7 +516,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для совета</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 5</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 6</div>
     </footer>
   </div>
 
@@ -556,8 +556,17 @@
       { id: 'rejected', name: 'Отклонено',        color: 'var(--critical)' },
     ];
     const CLASSES = ['5', '6', '7', '8', '9', '10', '11'];
-    const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З'];
-    const classLabel = (d) => d.class ? `${d.class}${d.letter ? ' «' + d.letter + '»' : ''} класс` : '';
+    // Буквы классов в школе (для каждой параллели свои)
+    const LETTERS = {
+      '5':  ['A', 'B', 'D', 'E', 'F', 'G', 'H'],
+      '6':  ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'],
+      '7':  ['A', 'D', 'E', 'F', 'G'],
+      '8':  ['ABC', 'D', 'E', 'H', 'J', 'K'],
+      '9':  ['ABC', 'D', 'E', 'H', 'J', 'K'],
+      '10': ['AC', 'D', 'E', 'H', 'J', 'K'],
+      '11': ['AC', 'D', 'E', 'H', 'J', 'K'],
+    };
+    const classLabel = (d) => d.class ? `${d.class}${d.letter || ''} класс` : '';
 
     // Автоматическая категория: начала слов, по которым узнаём тему (_ = пробел)
     const CATEGORY_WORDS = {
@@ -760,10 +769,17 @@
 
     // ================== ФОРМА ==================
     $('#f-class').innerHTML += CLASSES.map(c => `<option value="${c}">${c} класс</option>`).join('');
-    $('#f-letter').innerHTML += LETTERS.map(l => `<option value="${l}">«${l}»</option>`).join('');
+    function fillLetters(keep) {
+      const list = LETTERS[$('#f-class').value] || [];
+      $('#f-letter').innerHTML = `<option value="">${list.length ? '— выбери —' : 'сначала класс'}</option>`
+        + list.map(l => `<option value="${l}">${l}</option>`).join('');
+      $('#f-letter').disabled = !list.length;
+      if (keep && list.includes(keep)) $('#f-letter').value = keep;
+    }
+    $('#f-class').addEventListener('change', () => fillLetters());
     // запоминаем класс ученика, чтобы не выбирать заново
     $('#f-class').value = lsGet('my_class', '');
-    $('#f-letter').value = lsGet('my_letter', '');
+    fillLetters(lsGet('my_letter', ''));
 
     function renderSimilar() {
       const q = tokens($('#f-title').value);
