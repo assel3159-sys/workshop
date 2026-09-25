@@ -350,6 +350,7 @@
     .r-main { min-height: 220px; line-height: 1.5; }
     #report .main-text { white-space: pre-line; font-size: 15px; line-height: 1.6; margin: 0; }
     @media (max-width: 560px) { .report-controls { grid-template-columns: 1fr; } }
+    @media screen { #report { display: none; } }
     #report {
       background: #fff; color: #111;
       border: 1px solid var(--border); border-radius: 14px;
@@ -548,7 +549,7 @@
     <section class="tab" id="tab-report">
       <div class="card no-print">
         <h2>Отчёт для директора</h2>
-        <p class="hint">Напиши своими словами главное для директора. Ниже сайт сам добавит цифры и таблицы по всем предложениям. Потом нажми «Печать / PDF» и выбери «Сохранить как PDF», чтобы отправить файлом, или скопируй текст в мессенджер/почту.</p>
+        <p class="hint">Напиши отчёт для директора своими словами. Потом нажми «Печать / PDF» и выбери «Сохранить как PDF», чтобы отправить файлом, или скопируй текст в мессенджер/почту.</p>
         <div class="report-controls">
           <div><label for="r-to">Кому</label><input id="r-to"></div>
           <div><label for="r-from">От кого</label><input id="r-from"></div>
@@ -574,7 +575,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 14</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 15</div>
     </footer>
   </div>
 
@@ -1375,80 +1376,17 @@
       $('#r-main').value = ''; lsSet('r_main', ''); renderReport(); $('#r-main').focus();
     });
 
-    function reportData() {
-      const today = new Date().toISOString().slice(0, 10);
-      const weekAgo = Date.now() - 7 * 864e5;
-      const byVotes = [...groups].sort((a, b) => b.votes - a.votes);
-      const isLate = (g) => g.deadline && g.deadline < today && !['done', 'rejected'].includes(g.statusId);
-      return {
-        today, isLate,
-        total: groups.length,
-        votes: groups.reduce((s, g) => s + g.votes, 0),
-        newWeek: groups.filter(g => new Date(g.created) >= weekAgo).length,
-        votesWeek: groups.reduce((s, g) => s + g.events.filter(e => new Date(e) >= weekAgo).length, 0),
-        fav: byVotes.filter(g => g.starred),
-        need: byVotes.filter(g => g.statusId === 'new' || g.statusId === 'review'),
-        work: byVotes.filter(g => g.statusId === 'progress').sort((a, b) => (a.deadline || '9999').localeCompare(b.deadline || '9999')),
-        done: byVotes.filter(g => g.statusId === 'done'),
-        rejected: byVotes.filter(g => g.statusId === 'rejected'),
-        cats: CATEGORIES.map(c => ({ c, n: groups.filter(g => g.category === c.id).length, v: groups.filter(g => g.category === c.id).reduce((s, g) => s + g.votes, 0) }))
-          .filter(x => x.n).sort((a, b) => b.v - a.v),
-        repeats: groups.filter(g => g.members.length > 1).sort((a, b) => b.members.length - a.members.length || b.votes - a.votes),
-      };
-    }
     const fmtDateFull = (iso) => { const d = new Date(iso); return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()} г.`; };
 
+    // Отчёт — только текст команды (на экране не показывается, нужен для печати / PDF)
     function renderReport() {
       if (!isAdmin) return;
-      const r = reportData();
-      const deadlineCell = (g) => g.deadline ? `<span class="${r.isLate(g) ? 'late' : ''}">${fmtDeadline(g.deadline)}${r.isLate(g) ? ' — просрочено' : ''}</span>` : '—';
-      const ideasTable = (list, cols) => list.length ? `
-        <table><thead><tr><th>№</th><th>Предложение</th><th>Категория</th><th class="n">Голосов</th>${cols.map(c => `<th>${c[0]}</th>`).join('')}</tr></thead>
-        <tbody>${list.map((g, i) => `<tr><td>${i + 1}</td><td><b>${esc(g.title)}</b>${g.text ? `<div class="note">${esc(g.text)}</div>` : ''}</td>
-          <td>${esc(catById[g.category].name)}</td><td class="n">${g.votes}</td>${cols.map(c => `<td>${c[1](g)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
-        : '<p class="note">Нет.</p>';
-      const maxCat = Math.max(1, ...r.cats.map(x => x.v));
       const main = $('#r-main').value.trim();
-
       $('#report').innerHTML = `
         <p class="addr">${esc($('#r-to').value)}<br>от: ${esc($('#r-from').value)}</p>
         <h1>Отчёт по предложениям учеников</h1>
-        <p class="sub">Платформа «Голос школы» · по состоянию на ${fmtDateFull(new Date())}</p>
-        ${main ? `<h2>Главное от президента школы и её команды</h2><p class="main-text">${esc(main)}</p>` : ''}
-        ${r.fav.length ? `<h2>⭐ Лучшие идеи по мнению команды</h2>${ideasTable(r.fav, [['Статус', g => esc(statusById[g.statusId].name)]])}` : ''}
-
-        <h2>1. Итоги</h2>
-        <div class="sum">
-          <div><b>${r.total}</b>предложений</div>
-          <div><b>${r.votes}</b>голосов учеников</div>
-          <div><b>${r.work.length}</b>в работе</div>
-          <div><b>${r.done.length}</b>выполнено</div>
-        </div>
-        <p>За последние 7 дней: новых предложений — <b>${r.newWeek}</b>, новых голосов и обращений — <b>${r.votesWeek}</b>.</p>
-
-        <h2>2. Требует решения администрации</h2>
-        <p class="note">Самые поддерживаемые предложения, по которым ещё нет решения (статусы «Новое» и «На рассмотрении»).</p>
-        ${ideasTable(r.need, [['Статус', g => esc(statusById[g.statusId].name)]])}
-
-        <h2>3. В работе</h2>
-        ${ideasTable(r.work, [['Срок', deadlineCell], ['Комментарий', g => esc(g.comment) || '—']])}
-
-        <h2>4. Выполнено</h2>
-        ${ideasTable(r.done, [['Комментарий', g => esc(g.comment) || '—']])}
-
-        <h2>5. Самые актуальные категории</h2>
-        ${r.cats.length ? `<table><thead><tr><th>Категория</th><th class="n">Идей</th><th class="n">Голосов</th><th style="width:35%"></th></tr></thead><tbody>
-          ${r.cats.map(x => `<tr><td>${esc(x.c.name)}</td><td class="n">${x.n}</td><td class="n">${x.v}</td><td><div class="bar" style="width:${Math.round(x.v / maxCat * 100)}%"></div></td></tr>`).join('')}
-        </tbody></table>` : '<p class="note">Нет данных.</p>'}
-
-        <h2>6. Повторяющиеся обращения</h2>
-        <p class="note">Проблемы, о которых ученики написали независимо друг от друга несколько раз.</p>
-        ${r.repeats.length ? `<table><thead><tr><th>Проблема</th><th class="n">Обращений</th><th class="n">Голосов</th><th>Статус</th></tr></thead><tbody>
-          ${r.repeats.map(g => `<tr><td>${esc(g.title)}</td><td class="n">${g.members.length}</td><td class="n">${g.votes}</td><td>${esc(statusById[g.statusId].name)}</td></tr>`).join('')}
-        </tbody></table>` : '<p class="note">Повторов нет.</p>'}
-
-        ${r.rejected.length ? `<h2>7. Отклонено</h2>${ideasTable(r.rejected, [['Причина', g => esc(g.comment) || '—']])}` : ''}
-
+        <p class="sub">${fmtDateFull(new Date())}</p>
+        <p class="main-text">${esc(main) || '&nbsp;'}</p>
         <div class="sign">
           <span>${esc($('#r-from').value)}</span>
           <span>Подпись: ____________________</span>
@@ -1456,34 +1394,14 @@
     }
 
     function reportText() {
-      const r = reportData();
-      const line = (g, i) => `${i + 1}. ${g.title} — ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`;
-      const main = $('#r-main').value.trim();
-      const parts = [
-        `${$('#r-to').value}`,
+      return [
+        $('#r-to').value,
         `от: ${$('#r-from').value}`,
         '',
-        `ОТЧЁТ ПО ПРЕДЛОЖЕНИЯМ УЧЕНИКОВ на ${fmtDateFull(new Date())}`,
-        main ? `\nГЛАВНОЕ:\n${main}` : '',
-        r.fav.length ? '\nЛУЧШИЕ ИДЕИ ПО МНЕНИЮ КОМАНДЫ:\n' + r.fav.map((g, i) => `${i + 1}. ${g.title} — ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`).join('\n') : '',
+        `Отчёт по предложениям учеников, ${fmtDateFull(new Date())}`,
         '',
-        `Всего предложений: ${r.total}, голосов: ${r.votes}. В работе: ${r.work.length}, выполнено: ${r.done.length}.`,
-        `За 7 дней: +${r.newWeek} ${plural(r.newWeek, 'предложение', 'предложения', 'предложений')}, +${r.votesWeek} ${plural(r.votesWeek, 'голос', 'голоса', 'голосов')}.`,
-        '',
-        'ТРЕБУЕТ РЕШЕНИЯ:',
-        ...(r.need.length ? r.need.map(line) : ['нет']),
-        '',
-        'В РАБОТЕ:',
-        ...(r.work.length ? r.work.map((g, i) => line(g, i) + (g.deadline ? `, срок до ${fmtDeadline(g.deadline)}${r.isLate(g) ? ' (просрочено)' : ''}` : '')) : ['нет']),
-        '',
-        'ВЫПОЛНЕНО:',
-        ...(r.done.length ? r.done.map(line) : ['нет']),
-        '',
-        'КАТЕГОРИИ (голосов):',
-        ...r.cats.map(x => `— ${x.c.name}: ${x.v}`),
-      ];
-      if (r.repeats.length) parts.push('', 'ПОВТОРЯЮЩИЕСЯ ОБРАЩЕНИЯ:', ...r.repeats.map(g => `— ${g.title}: написали ${g.members.length} ${plural(g.members.length, 'раз', 'раза', 'раз')}, ${g.votes} ${plural(g.votes, 'голос', 'голоса', 'голосов')}`));
-      return parts.filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
+        $('#r-main').value.trim(),
+      ].join('\n');
     }
 
     $('#r-print').addEventListener('click', () => {
