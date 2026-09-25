@@ -480,7 +480,8 @@
               <p>Новые предложения + голоса «я тоже»</p>
             </div>
             <div class="seg" id="period-seg">
-              <button data-period="week" aria-pressed="true">Недели</button>
+              <button data-period="day" aria-pressed="true">Дни</button>
+              <button data-period="week" aria-pressed="false">Недели</button>
               <button data-period="month" aria-pressed="false">Месяцы</button>
             </div>
           </div>
@@ -552,7 +553,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 10</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 11</div>
     </footer>
   </div>
 
@@ -1112,7 +1113,7 @@
     });
 
     // ================== СТАТИСТИКА ==================
-    let period = 'week';
+    let period = 'day';
     const charts = {};
     $('#period-seg').addEventListener('click', (e) => {
       const b = e.target.closest('button'); if (!b) return;
@@ -1121,31 +1122,39 @@
       renderStats();
     });
 
-    function weekStart(d) {
+    // Начало периода (день / неделя с понедельника / месяц) по местному времени
+    function periodStart(d) {
       const x = new Date(d); x.setHours(0, 0, 0, 0);
-      x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+      if (period === 'week') x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+      if (period === 'month') x.setDate(1);
       return x;
     }
+    function prevPeriod(x) {
+      if (period === 'day') return new Date(x.getFullYear(), x.getMonth(), x.getDate() - 1);
+      if (period === 'week') return new Date(x.getFullYear(), x.getMonth(), x.getDate() - 7);
+      return new Date(x.getFullYear(), x.getMonth() - 1, 1);
+    }
     function buckets(dates) {
-      const now = new Date();
-      const keyOf = (d) => period === 'week'
-        ? weekStart(d).getTime()
-        : new Date(d.getFullYear(), d.getMonth(), 1).getTime();
       const counts = {};
-      dates.forEach(s => { const k = keyOf(new Date(s)); counts[k] = (counts[k] || 0) + 1; });
-      // последние 12 недель / 12 месяцев, без пропусков
+      let first = null;
+      dates.forEach(s => {
+        const k = periodStart(new Date(s)).getTime();
+        counts[k] = (counts[k] || 0) + 1;
+        if (first === null || k < first) first = k;
+      });
+      // От первого обращения до сегодня, без пропусков. Не больше 14 дней / 12 недель / 12 месяцев;
+      // для дней показываем минимум неделю, чтобы график не был из одного столбика.
+      const maxN = period === 'day' ? 14 : 12, minN = period === 'day' ? 7 : 1;
       const out = [];
-      let cur = period === 'week' ? weekStart(now) : new Date(now.getFullYear(), now.getMonth(), 1);
-      for (let i = 0; i < 12; i++) {
+      let cur = periodStart(new Date());
+      while (out.length < maxN && (out.length < minN || (first !== null && cur.getTime() >= first))) {
         const k = cur.getTime();
-        const label = period === 'week'
-          ? `${cur.getDate()} ${MONTHS[cur.getMonth()]}`
-          : `${MONTHS[cur.getMonth()]} ${String(cur.getFullYear()).slice(2)}`;
-        const tip = period === 'week'
-          ? `Неделя с ${cur.getDate()} ${MONTHS_FULL[cur.getMonth()]}`
-          : `${MONTHS[cur.getMonth()]} ${cur.getFullYear()}`;
+        const d = cur.getDate(), m = cur.getMonth(), y = cur.getFullYear();
+        const label = period === 'month' ? `${MONTHS[m]} ${String(y).slice(2)}` : `${d} ${MONTHS[m]}`;
+        const tip = period === 'day' ? `${d} ${MONTHS_FULL[m]}`
+          : period === 'week' ? `Неделя с ${d} ${MONTHS_FULL[m]}` : `${MONTHS[m]} ${y}`;
         out.unshift({ label, tip, value: counts[k] || 0 });
-        cur = period === 'week' ? new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() - 7) : new Date(cur.getFullYear(), cur.getMonth() - 1, 1);
+        cur = prevPeriod(cur);
       }
       return out;
     }
