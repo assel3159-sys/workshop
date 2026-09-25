@@ -441,7 +441,7 @@
     </header>
 
     <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="propose" aria-selected="true">✍️ Написать</button>
+      <button role="tab" data-tab="propose" aria-selected="true" class="guest-only">✍️ Написать</button>
       <button role="tab" data-tab="list" aria-selected="false">📋 Обращения</button>
       <button role="tab" data-tab="stats" aria-selected="false">📊 Статистика</button>
       <button role="tab" data-tab="qr" aria-selected="false">🔳 QR-код</button>
@@ -621,7 +621,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 18</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 19</div>
     </footer>
   </div>
 
@@ -1525,6 +1525,8 @@
     });
 
     // ================== СТАРТ ==================
+    // В режиме команды вкладка «Написать» не нужна — сразу открываем обращения
+    if (isAdmin) showTab('list');
     reload();
     checkAdminHash();
     setInterval(reload, 60000);
