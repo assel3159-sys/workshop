@@ -172,6 +172,13 @@
     .btn.danger { background: var(--critical); }
     .btn.block { width: 100%; margin-top: 16px; padding: 12px; }
     .class-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .contact-box { margin-top: 18px; padding: 4px 14px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--page); }
+    .contact-title { font-size: 14px; font-weight: 600; margin-top: 12px; }
+    .contact-title .opt, label .opt { font-weight: 400; color: var(--muted); }
+    .authors { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: var(--page); border: 1px dashed var(--serious); font-size: 14px; }
+    .authors b { font-size: 12px; color: var(--ink-2); }
+    .authors ul { margin: 6px 0 0; padding-left: 18px; }
+    .authors li { overflow-wrap: anywhere; }
 
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .chip-radio { position: relative; }
@@ -388,7 +395,7 @@
     <section class="tab active" id="tab-propose">
       <div class="card">
         <h2>Твоё предложение</h2>
-        <p class="hint">Анонимно. Имя не нужно.</p>
+        <p class="hint">Можно анонимно. Имя и контакт — по желанию.</p>
         <form id="form" autocomplete="off">
           <label for="f-title">Коротко: что предлагаешь?</label>
           <input id="f-title" maxlength="120" required placeholder="Например: свободная одежда по пятницам" autocomplete="off">
@@ -411,6 +418,15 @@
                 <option value="">— выбери —</option>
               </select>
             </div>
+          </div>
+
+          <div class="contact-box">
+            <div class="contact-title">Если хочешь, чтобы совет мог с тобой связаться <span class="opt">(необязательно)</span></div>
+            <label for="f-name">Имя и фамилия</label>
+            <input id="f-name" maxlength="80" placeholder="Например: Айгерим Сапарова">
+            <label for="f-contact">Контакт</label>
+            <input id="f-contact" maxlength="100" placeholder="Телефон, Telegram или Instagram">
+            <p class="hint" style="margin:8px 0 0">🔒 Имя и контакт видит только школьный совет. Другим ученикам на сайте они не показываются.</p>
           </div>
 
           <button class="btn block" type="submit" id="f-submit">Отправить</button>
@@ -516,7 +532,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для совета</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 7</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 8</div>
     </footer>
   </div>
 
@@ -781,6 +797,8 @@
     function clearForm() {
       $('#f-title').value = '';
       $('#f-text').value = '';
+      $('#f-name').value = '';
+      $('#f-contact').value = '';
       $('#f-class').value = '';
       fillLetters();
       $('#similar').innerHTML = '';
@@ -830,6 +848,8 @@
           category: classify(title + ' ' + $('#f-text').value),
           class: $('#f-class').value,
           letter: $('#f-letter').value,
+          name: $('#f-name').value.trim(),
+          contact: $('#f-contact').value.trim(),
           device: DEVICE,
         },
       });
@@ -916,7 +936,7 @@
                   <summary>Ещё ${others.length} ${plural(others.length, 'похожее обращение', 'похожих обращения', 'похожих обращений')}</summary>
                   <ul>${others.map(m => `<li><b>${esc(m.data.title)}</b>${m.data.text ? ' — ' + esc(m.data.text) : ''}</li>`).join('')}</ul>
                 </details>` : ''}
-              ${isAdmin ? quickBox(g) : ''}
+              ${isAdmin ? authorsBox(g) + quickBox(g) : ''}
             </div>
           </div>
         </article>`;
@@ -959,6 +979,13 @@
     const QUICK = [
       ['review', '👀 На рассмотрение'], ['progress', '🚀 Взять в работу'], ['done', '✅ Выполнено'], ['rejected', '✕ Отклонить'], ['new', '↺ Новое'],
     ];
+    // Авторы, оставившие имя или контакт (видно только совету)
+    function authorsBox(g) {
+      const list = g.members.filter(m => m.data.name || m.data.contact);
+      if (!list.length) return '';
+      return `<div class="authors"><b>👤 Кто написал (видит только совет)</b><ul>${list.map(m => `<li>${esc(m.data.name || 'без имени')}`
+        + `${m.data.contact ? ' — ' + esc(m.data.contact) : ''}${m.data.class ? ', ' + esc(classLabel(m.data)) : ''}</li>`).join('')}</ul></div>`;
+    }
     function quickBox(g) {
       return `
       <div class="quick" data-admin="${esc(g.id)}">
