@@ -171,6 +171,7 @@
     .btn.small { padding: 6px 12px; font-size: 14px; }
     .btn.danger { background: var(--critical); }
     .btn.block { width: 100%; margin-top: 16px; padding: 12px; }
+    .class-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
     .chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .chip-radio { position: relative; }
@@ -397,10 +398,20 @@
           <textarea id="f-text" maxlength="1000" placeholder="Почему это важно? Как это можно сделать?"></textarea>
 
 
-          <label for="f-class">Класс <span class="opt">(необязательно)</span></label>
-          <select id="f-class">
-            <option value="">— не указывать —</option>
-          </select>
+          <div class="class-row">
+            <div>
+              <label for="f-class">Класс</label>
+              <select id="f-class" required>
+                <option value="">— выбери —</option>
+              </select>
+            </div>
+            <div>
+              <label for="f-letter">Буква класса</label>
+              <select id="f-letter" required>
+                <option value="">— выбери —</option>
+              </select>
+            </div>
+          </div>
 
           <button class="btn block" type="submit" id="f-submit">Отправить</button>
         </form>
@@ -505,7 +516,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для совета</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 4</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 5</div>
     </footer>
   </div>
 
@@ -545,6 +556,8 @@
       { id: 'rejected', name: 'Отклонено',        color: 'var(--critical)' },
     ];
     const CLASSES = ['5', '6', '7', '8', '9', '10', '11'];
+    const LETTERS = ['А', 'Б', 'В', 'Г', 'Д', 'Е', 'Ж', 'З'];
+    const classLabel = (d) => d.class ? `${d.class}${d.letter ? ' «' + d.letter + '»' : ''} класс` : '';
 
     // Автоматическая категория: начала слов, по которым узнаём тему (_ = пробел)
     const CATEGORY_WORDS = {
@@ -747,6 +760,10 @@
 
     // ================== ФОРМА ==================
     $('#f-class').innerHTML += CLASSES.map(c => `<option value="${c}">${c} класс</option>`).join('');
+    $('#f-letter').innerHTML += LETTERS.map(l => `<option value="${l}">«${l}»</option>`).join('');
+    // запоминаем класс ученика, чтобы не выбирать заново
+    $('#f-class').value = lsGet('my_class', '');
+    $('#f-letter').value = lsGet('my_letter', '');
 
     function renderSimilar() {
       const q = tokens($('#f-title').value);
@@ -779,6 +796,7 @@
       e.preventDefault();
       const title = $('#f-title').value.trim();
       if (title.length < 3) { toast('Напиши чуть подробнее'); return; }
+      if (!$('#f-class').value || !$('#f-letter').value) { toast('Выбери класс и букву класса'); return; }
       const btn = $('#f-submit');
       btn.disabled = true;
       const { error } = await db.from(TABLE).insert({
@@ -788,12 +806,16 @@
           text: $('#f-text').value.trim(),
           category: classify(title + ' ' + $('#f-text').value),
           class: $('#f-class').value,
+          letter: $('#f-letter').value,
           device: DEVICE,
         },
       });
       btn.disabled = false;
       if (error) { toast('Ошибка: ' + error.message); return; }
-      $('#form').reset();
+      lsSet('my_class', $('#f-class').value);
+      lsSet('my_letter', $('#f-letter').value);
+      $('#f-title').value = '';
+      $('#f-text').value = '';
       $('#similar').innerHTML = '';
       toast('Спасибо! Предложение отправлено 🎉');
       await reload();
@@ -866,7 +888,7 @@
                 ${statusBadge(g.statusId)}
                 ${g.deadline ? `<span class="deadline ${overdue ? 'overdue' : ''}">📅 срок до ${fmtDeadline(g.deadline)}${overdue ? ' (просрочено)' : ''}</span>` : ''}
                 <span class="tag">${cat.icon} ${esc(cat.name)}</span>
-                ${g.root.data.class ? `<span>${esc(g.root.data.class)} класс</span>` : ''}
+                ${g.root.data.class ? `<span>${esc(classLabel(g.root.data))}</span>` : ''}
               </div>
               ${g.comment ? `<div class="reply"><b>Ответ совета:</b> ${esc(g.comment)}</div>` : ''}
               ${others.length ? `
