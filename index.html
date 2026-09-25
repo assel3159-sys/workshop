@@ -216,6 +216,26 @@
     }
     .toast.show { opacity: 1; }
 
+    .modal {
+      position: fixed; inset: 0; z-index: 60;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; background: rgba(0, 0, 0, .45);
+    }
+    .modal[hidden] { display: none; }
+    .modal-card {
+      width: 100%; max-width: 400px;
+      background: var(--card); color: var(--ink);
+      border-radius: 18px; padding: 28px 22px 22px;
+      text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.25);
+      animation: pop .25s ease-out;
+    }
+    .modal-icon { font-size: 48px; line-height: 1; }
+    .modal-card h2 { margin: 12px 0 8px; font-size: 22px; }
+    .modal-card p { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .modal-actions { display: grid; gap: 8px; }
+    @keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .modal-card { animation: none; } }
+
     .filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
     .filters input { grid-column: 1 / -1; }
     @media (max-width: 560px) { .filters { grid-template-columns: 1fr 1fr; } .filters select:last-child { grid-column: 1 / -1; } }
@@ -532,7 +552,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 9</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 10</div>
     </footer>
   </div>
 
@@ -544,6 +564,18 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <div class="modal" id="sent-modal" hidden role="dialog" aria-modal="true" aria-labelledby="sent-title">
+    <div class="modal-card">
+      <div class="modal-icon">✅</div>
+      <h2 id="sent-title">Ваше предложение отправлено!</h2>
+      <p>Спасибо! Президент школы и её команда обязательно его рассмотрят. Следить за голосами и статусом можно во вкладке «Предложения».</p>
+      <div class="modal-actions">
+        <button class="btn" id="sent-view">📋 Посмотреть предложения</button>
+        <button class="btn ghost" id="sent-more">✍️ Написать ещё</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // ================== НАСТРОЙКИ ==================
@@ -857,10 +889,17 @@
       if (error) { toast('Ошибка: ' + error.message); return; }
       clearForm();
       $('#similar').innerHTML = '';
-      toast('Спасибо! Предложение отправлено 🎉');
-      await reload();
-      showTab('list');
+      $('#sent-modal').hidden = false;
+      $('#sent-view').focus();
+      reload();
     });
+
+    // Окно «Ваше предложение отправлено!»
+    function closeSent(tab) { $('#sent-modal').hidden = true; showTab(tab); if (tab === 'propose') $('#f-title').focus(); }
+    $('#sent-view').addEventListener('click', () => closeSent('list'));
+    $('#sent-more').addEventListener('click', () => closeSent('propose'));
+    $('#sent-modal').addEventListener('click', (e) => { if (e.target.id === 'sent-modal') closeSent('propose'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sent-modal').hidden) closeSent('propose'); });
 
     // ================== ГОЛОСОВАНИЕ ==================
     async function vote(groupId) {
