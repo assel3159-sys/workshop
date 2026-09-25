@@ -374,7 +374,7 @@
   <div class="wrap">
     <header class="top">
       <h1>Голос школы</h1>
-      <button class="btn small ghost council-btn guest-only" id="admin-login-top">🔐 Совет</button>
+      <button class="btn small ghost council-btn guest-only" id="admin-login-top">🔐 Команда</button>
       <p>Напиши, что хочешь изменить в школе. Поддержи идеи других — самые популярные берём в работу.</p>
     </header>
 
@@ -387,7 +387,7 @@
     </nav>
 
     <div class="admin-banner">
-      <span>🔧 Режим совета: статус и срок — в карточке идеи, отчёт — во вкладке «Отчёт директору».</span>
+      <span>🔧 Режим команды президента: статус и срок — в карточке идеи, отчёт — во вкладке «Отчёт директору».</span>
       <button class="btn small ghost" id="admin-exit">Выйти</button>
     </div>
 
@@ -421,12 +421,12 @@
           </div>
 
           <div class="contact-box">
-            <div class="contact-title">Если хочешь, чтобы совет мог с тобой связаться <span class="opt">(необязательно)</span></div>
+            <div class="contact-title">Если хочешь, чтобы президент школы и её команда могли с тобой связаться <span class="opt">(необязательно)</span></div>
             <label for="f-name">Имя и фамилия</label>
             <input id="f-name" maxlength="80" placeholder="Например: Айгерим Сапарова">
             <label for="f-contact">Контакт</label>
             <input id="f-contact" maxlength="100" placeholder="Телефон, Telegram или Instagram">
-            <p class="hint" style="margin:8px 0 0">🔒 Имя и контакт видит только школьный совет. Другим ученикам на сайте они не показываются.</p>
+            <p class="hint" style="margin:8px 0 0">🔒 Имя и контакт видят только президент школы и её команда. Другим ученикам на сайте они не показываются.</p>
           </div>
 
           <button class="btn block" type="submit" id="f-submit">Отправить</button>
@@ -531,8 +531,8 @@
     </section>
 
     <footer class="foot">
-      <button class="linkbtn guest-only" id="admin-login">🔧 Вход для совета</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 8</div>
+      <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 9</div>
     </footer>
   </div>
 
@@ -930,7 +930,7 @@
                 <span class="tag">${cat.icon} ${esc(cat.name)}</span>
                 ${g.root.data.class ? `<span>${esc(classLabel(g.root.data))}</span>` : ''}
               </div>
-              ${g.comment ? `<div class="reply"><b>Ответ совета:</b> ${esc(g.comment)}</div>` : ''}
+              ${g.comment ? `<div class="reply"><b>Ответ президента школы:</b> ${esc(g.comment)}</div>` : ''}
               ${others.length ? `
                 <details class="members">
                   <summary>Ещё ${others.length} ${plural(others.length, 'похожее обращение', 'похожих обращения', 'похожих обращений')}</summary>
@@ -955,14 +955,14 @@
     }
     async function checkAdminHash(force) {
       if ((force !== true && location.hash !== '#admin') || isAdmin) return;
-      const pin = prompt('PIN-код совета:');
+      const pin = prompt('PIN-код команды президента:');
       if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search);
       if (pin === null) return;
       if (await sha256(pin.trim()) === ADMIN_PIN_HASH) {
         isAdmin = true;
         sessionStorageSet('admin', '1');
         document.body.classList.add('admin');
-        toast('Режим совета включён');
+        toast('Режим команды президента включён');
         renderList();
         showTab('list');
       } else toast('Неверный PIN');
@@ -983,13 +983,13 @@
     function authorsBox(g) {
       const list = g.members.filter(m => m.data.name || m.data.contact);
       if (!list.length) return '';
-      return `<div class="authors"><b>👤 Кто написал (видит только совет)</b><ul>${list.map(m => `<li>${esc(m.data.name || 'без имени')}`
+      return `<div class="authors"><b>👤 Кто написал (видят только президент и команда)</b><ul>${list.map(m => `<li>${esc(m.data.name || 'без имени')}`
         + `${m.data.contact ? ' — ' + esc(m.data.contact) : ''}${m.data.class ? ', ' + esc(classLabel(m.data)) : ''}</li>`).join('')}</ul></div>`;
     }
     function quickBox(g) {
       return `
       <div class="quick" data-admin="${esc(g.id)}">
-        <div class="qt">🔧 Статус (видно только совету)</div>
+        <div class="qt">🔧 Статус (видят только президент и команда)</div>
         <div class="qb">${QUICK.map(([id, label]) => `
           <button data-quick="${id}" class="${g.statusId === id ? 'cur' : ''}"><i style="background:${statusById[id].color}"></i>${label}</button>`).join('')}
         </div>
@@ -1009,7 +1009,7 @@
         <div class="full"><label>Категория (определяется автоматически, можно поправить)</label>
           <select name="category"><option value="">Авто: ${esc(catById[g.category].name)}</option>
           ${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === g.manualCat ? 'selected' : ''}>${c.icon} ${esc(c.name)}</option>`).join('')}</select></div>
-        <div class="full"><label>Ответ совета</label><input name="comment" maxlength="300" value="${esc(g.comment)}" placeholder="Например: договорились с директором, пробуем с октября"></div>
+        <div class="full"><label>Ответ президента школы</label><input name="comment" maxlength="300" value="${esc(g.comment)}" placeholder="Например: договорились с директором, пробуем с октября"></div>
         <div class="full row">
           <button class="btn small" data-act="save">💾 Сохранить</button>
           <select name="merge" style="flex:1;min-width:160px">
@@ -1283,9 +1283,9 @@
 
     // ================== ОТЧЁТ ДЛЯ ДИРЕКТОРА ==================
     $('#r-to').value = lsGet('r_to', 'Директору школы');
-    $('#r-from').value = lsGet('r_from', 'Совет учащихся');
+    $('#r-from').value = lsGet('r_from2', 'Президент школы и её команда');
     ['#r-to', '#r-from', '#r-top', '#r-note'].forEach(sel => $(sel).addEventListener('input', () => {
-      lsSet('r_to', $('#r-to').value); lsSet('r_from', $('#r-from').value); renderReport();
+      lsSet('r_to', $('#r-to').value); lsSet('r_from2', $('#r-from').value); renderReport();
     }));
 
     function reportData() {
