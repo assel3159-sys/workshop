@@ -1,0 +1,30 @@
+# Будилка для базы Supabase.
+# На бесплатном плане Supabase ставит проект на паузу, если к базе
+# долго никто не обращается (около недели). Этот сценарий каждые 3 дня
+# делает один маленький запрос к базе, чтобы она не засыпала
+# (например, на каникулах). Запустить вручную: вкладка Actions → этот сценарий → Run workflow.
+name: Будилка базы Supabase
+
+on:
+  schedule:
+    - cron: "0 3 */3 * *"   # каждые 3 дня в 03:00 UTC (08:00 по Астане)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Запрос к базе
+        env:
+          # Публичный ключ (тот же, что в index.html) — он и так виден всем посетителям сайта.
+          SUPABASE_URL: https://ossvjewxhcrawwxbadqd.supabase.co
+          SUPABASE_KEY: sb_publishable_yV89rVEs5iIibMJIApTN-g_TZtT9ewN
+        run: |
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --retry 3 --retry-delay 20 \
+            "$SUPABASE_URL/rest/v1/app_data?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "Ответ базы: $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::База не ответила (код $code). Возможно, проект Supabase на паузе — нажмите Restore project на supabase.com/dashboard."
+            exit 1
+          fi

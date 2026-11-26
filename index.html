@@ -621,7 +621,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 21</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 22</div>
     </footer>
   </div>
 
@@ -651,8 +651,9 @@
     const SUPABASE_URL = 'https://ossvjewxhcrawwxbadqd.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_yV89rVEs5iIibMJIApTN-g_TZtT9ewN';
     const TABLE = 'app_data';
-    // SHA-256 от пароля команды президента (сам пароль здесь не хранится).
-    const ADMIN_PIN_HASH = '1c85da04c6184400fc2afb5406deb5afe45e3367513781374d13849e98c3ec48';
+    // Отпечаток пароля команды президента (PBKDF2, сам пароль здесь не хранится).
+    // Проверка намеренно медленная, чтобы пароль нельзя было подобрать перебором.
+    const ADMIN_PIN_HASH = '999a6f61c34cf08724399bc24f3fb9c6169c56a04cdb44187414a405a770fb25';
 
     const CATEGORIES = [
       { id: 'study',   name: 'Учёба и уроки',       icon: '📚' },
@@ -1114,16 +1115,19 @@
     function sessionStorageSet(k, v) { try { v === null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} }
     document.body.classList.toggle('admin', isAdmin);
 
-    async function sha256(text) {
-      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-      return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    async function passwordHash(text) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', enc.encode(text), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: enc.encode('golos-shkoly'), iterations: 300000, hash: 'SHA-256' }, key, 256);
+      return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, '0')).join('');
     }
     async function checkAdminHash(force) {
       if ((force !== true && location.hash !== '#admin') || isAdmin) return;
       const pin = prompt('Пароль команды президента:');
       if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search);
       if (pin === null) return;
-      if (await sha256(pin.trim()) === ADMIN_PIN_HASH) {
+      if (await passwordHash(pin.trim()) === ADMIN_PIN_HASH) {
         isAdmin = true;
         sessionStorageSet('admin', '1');
         document.body.classList.add('admin');
