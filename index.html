@@ -621,7 +621,7 @@
 
     <footer class="foot">
       <button class="linkbtn guest-only" id="admin-login">🔧 Вход для команды президента</button>
-      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 20</div>
+      <div style="color:var(--muted);font-size:12px;margin-top:6px">версия 21</div>
     </footer>
   </div>
 
@@ -651,8 +651,8 @@
     const SUPABASE_URL = 'https://ossvjewxhcrawwxbadqd.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_yV89rVEs5iIibMJIApTN-g_TZtT9ewN';
     const TABLE = 'app_data';
-    // SHA-256 от PIN-кода совета (сейчас PIN = 2026). Вход: добавь #admin к адресу сайта.
-    const ADMIN_PIN_HASH = '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab';
+    // SHA-256 от пароля команды президента (сам пароль здесь не хранится).
+    const ADMIN_PIN_HASH = '1c85da04c6184400fc2afb5406deb5afe45e3367513781374d13849e98c3ec48';
 
     const CATEGORIES = [
       { id: 'study',   name: 'Учёба и уроки',       icon: '📚' },
@@ -1120,7 +1120,7 @@
     }
     async function checkAdminHash(force) {
       if ((force !== true && location.hash !== '#admin') || isAdmin) return;
-      const pin = prompt('PIN-код команды президента:');
+      const pin = prompt('Пароль команды президента:');
       if (location.hash === '#admin') history.replaceState(null, '', location.pathname + location.search);
       if (pin === null) return;
       if (await sha256(pin.trim()) === ADMIN_PIN_HASH) {
@@ -1130,7 +1130,7 @@
         toast('Режим команды президента включён');
         renderList();
         showTab('list');
-      } else toast('Неверный PIN');
+      } else toast('Неверный пароль');
     }
     window.addEventListener('hashchange', checkAdminHash);
     $('#admin-login').addEventListener('click', () => checkAdminHash(true));
@@ -1414,7 +1414,7 @@
 
     // ================== QR ==================
     // Основной (публичный) адрес сайта — именно он попадает в QR-код
-    const SITE_URL = 'https://workshop-assel8.vercel.app/';
+    const SITE_URL = 'https://assel3159-sys.github.io/workshop/';
     const defaultUrl = SITE_URL;
     $('#qr-url').value = defaultUrl;
     function qrSvg(url) {
